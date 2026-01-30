@@ -149,12 +149,20 @@ class WineCellar {
         const winesRef = this.db.ref(`users/${this.userId}/wines`);
 
         winesRef.on('value', (snapshot) => {
-            if (this.syncInProgress) return;
+            console.log('📥 Firebase listener triggered. syncInProgress:', this.syncInProgress);
+
+            if (this.syncInProgress) {
+                console.log('  ⏸️ Ignoring update (sync in progress)');
+                return;
+            }
 
             const data = snapshot.val();
             const firebaseWines = data ? Object.values(data) : [];
 
-            console.log('Firebase data received:', firebaseWines.length, 'wines');
+            console.log('  📊 Firebase data received:', firebaseWines.length, 'wines');
+            if (firebaseWines.length > 0) {
+                console.log('  Wine IDs in Firebase:', firebaseWines.map(w => w.id).join(', '));
+            }
 
             // Firebase is the source of truth - replace local wines entirely
             this.wines = firebaseWines;
@@ -169,7 +177,7 @@ class WineCellar {
             this.updateStats();
             this.updateSearchVisibility();
 
-            console.log('Wines synced from cloud:', this.wines.length);
+            console.log('  ✅ Wines synced from cloud:', this.wines.length);
         });
     }
 
@@ -185,17 +193,38 @@ class WineCellar {
 
     async deleteWineFromFirebase(wineId) {
         if (!this.firebaseEnabled || !this.db || !this.userId) {
-            console.log('Cannot delete from Firebase - not enabled or no user');
-            return;
+            console.log('❌ Cannot delete from Firebase - not enabled or no user');
+            console.log('  firebaseEnabled:', this.firebaseEnabled);
+            console.log('  db:', !!this.db);
+            console.log('  userId:', this.userId);
+            return false;
         }
 
         try {
-            console.log('Deleting wine from Firebase:', wineId);
-            console.log('Path:', `users/${this.userId}/wines/${wineId}`);
-            await this.db.ref(`users/${this.userId}/wines/${wineId}`).remove();
-            console.log('Wine deleted from Firebase successfully');
+            const path = `users/${this.userId}/wines/${wineId}`;
+            console.log('🗑️ Deleting wine from Firebase...');
+            console.log('  Wine ID:', wineId);
+            console.log('  Full path:', path);
+
+            // First check if the wine exists in Firebase
+            const snapshot = await this.db.ref(path).once('value');
+            console.log('  Wine exists in Firebase:', snapshot.exists());
+
+            if (snapshot.exists()) {
+                await this.db.ref(path).remove();
+                console.log('✅ Wine deleted from Firebase successfully');
+
+                // Verify the delete worked
+                const verifySnapshot = await this.db.ref(path).once('value');
+                console.log('  Verified deleted:', !verifySnapshot.exists());
+                return true;
+            } else {
+                console.log('⚠️ Wine was not found in Firebase - may already be deleted');
+                return true;
+            }
         } catch (error) {
-            console.error('Error deleting wine from Firebase:', error);
+            console.error('❌ Error deleting wine from Firebase:', error);
+            return false;
         }
     }
 
@@ -1222,18 +1251,28 @@ BELANGRIJK:
 
     async deleteCurrentWine() {
         const wineIdToDelete = this.currentWineId;
+        const wineName = this.wines.find(w => w.id === wineIdToDelete)?.name || 'Unknown';
+
+        console.log('🍷 Starting delete process for:', wineName, '(ID:', wineIdToDelete, ')');
 
         // Set flag to prevent Firebase listener from re-adding the wine
         this.syncInProgress = true;
 
+        // Remove from local array
         this.wines = this.wines.filter(w => w.id !== wineIdToDelete);
+        console.log('  Removed from local array. Wines remaining:', this.wines.length);
 
         // Save locally
         this.saveToLocalStorage();
+        console.log('  Saved to localStorage');
 
         // Delete from Firebase and wait for it to complete
         if (this.firebaseEnabled) {
-            await this.deleteWineFromFirebase(wineIdToDelete);
+            console.log('  Firebase is enabled, deleting from cloud...');
+            const deleteSuccess = await this.deleteWineFromFirebase(wineIdToDelete);
+            console.log('  Firebase delete result:', deleteSuccess ? 'SUCCESS' : 'FAILED');
+        } else {
+            console.log('  Firebase not enabled, skip cloud delete');
         }
 
         this.renderWineList();
@@ -1248,7 +1287,8 @@ BELANGRIJK:
         // Reset flag after a short delay to allow Firebase to sync
         setTimeout(() => {
             this.syncInProgress = false;
-        }, 1000);
+            console.log('  Sync flag reset');
+        }, 2000);
     }
 
     // ============================
