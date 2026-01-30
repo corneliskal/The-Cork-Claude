@@ -336,9 +336,28 @@ class WineCellar {
 
         try {
             const wineData = await this.callChatGPTVision(imageData);
-            indicator.classList.add('hidden');
             this.populateForm(wineData);
-            this.showToast('Wine recognized! Review and adjust details.');
+
+            // Nu zoeken naar een mooie productfoto
+            if (wineData.name && wineData.producer) {
+                indicatorText.textContent = 'Zoeken naar productfoto...';
+                try {
+                    const imageUrl = await this.searchWineImage(wineData);
+                    if (imageUrl) {
+                        await this.loadExternalImage(imageUrl);
+                        this.showToast('Wijn herkend met productfoto!');
+                    } else {
+                        this.showToast('Wijn herkend! Geen productfoto gevonden.');
+                    }
+                } catch (imgError) {
+                    console.log('Could not load product image:', imgError);
+                    this.showToast('Wijn herkend! Productfoto niet beschikbaar.');
+                }
+            } else {
+                this.showToast('Wijn herkend! Controleer de gegevens.');
+            }
+
+            indicator.classList.add('hidden');
         } catch (error) {
             console.error('Vision API error:', error);
             indicator.classList.add('hidden');
@@ -351,6 +370,116 @@ class WineCellar {
                 this.showToast('Could not analyze image. Enter details manually.');
             }
         }
+    }
+
+    async searchWineImage(wineData) {
+        const searchQuery = `${wineData.producer} ${wineData.name} ${wineData.year || ''} wine bottle`.trim();
+
+        const prompt = `Zoek een directe afbeelding URL voor deze wijn: "${searchQuery}"
+
+Geef ALLEEN een JSON object terug met dit formaat:
+{
+    "imageUrl": "https://directe-link-naar-afbeelding.jpg"
+}
+
+BELANGRIJK:
+- Zoek naar een professionele productfoto van de wijnfles
+- De URL moet direct naar een afbeelding linken (eindigt vaak op .jpg, .png, .webp)
+- Probeer afbeeldingen van bekende wijnwebsites zoals vivino.com, wine-searcher.com, of wijnwebshops
+- Als je geen geschikte afbeelding kunt vinden, geef dan: {"imageUrl": null}
+- Geef ALLEEN de JSON terug, geen andere tekst`;
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.apiKey}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o',
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                max_tokens: 200
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+
+        let jsonStr = content;
+        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (jsonMatch) {
+            jsonStr = jsonMatch[1];
+        }
+
+        const result = JSON.parse(jsonStr.trim());
+        return result.imageUrl;
+    }
+
+    async loadExternalImage(imageUrl) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+
+            img.onload = () => {
+                try {
+                    // Converteer naar canvas om als base64 op te slaan
+                    const canvas = document.createElement('canvas');
+                    const maxSize = 800;
+                    let { width, height } = img;
+
+                    if (width > maxSize || height > maxSize) {
+                        if (width > height) {
+                            height = (height / width) * maxSize;
+                            width = maxSize;
+                        } else {
+                            width = (width / height) * maxSize;
+                            height = maxSize;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const compressedData = canvas.toDataURL('image/jpeg', 0.8);
+
+                    // Update preview en currentImage
+                    this.currentImage = compressedData;
+                    const preview = document.getElementById('previewImg');
+                    preview.src = compressedData;
+                    document.getElementById('imagePreview').classList.add('has-image');
+
+                    resolve(compressedData);
+                } catch (e) {
+                    reject(e);
+                }
+            };
+
+            img.onerror = () => {
+                reject(new Error('Failed to load image'));
+            };
+
+            // Probeer via proxy als directe toegang niet werkt
+            img.src = imageUrl;
+
+            // Timeout na 5 seconden
+            setTimeout(() => {
+                if (!img.complete) {
+                    reject(new Error('Image load timeout'));
+                }
+            }, 5000);
+        });
     }
 
     async callChatGPTVision(imageData) {
