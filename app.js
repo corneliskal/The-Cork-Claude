@@ -11,6 +11,8 @@ class WineCellar {
         this.editMode = false;
         this.currentImage = null;
         this.apiKey = null;
+        this.googleApiKey = null;
+        this.googleSearchEngineId = null;
         this.searchQuery = '';
 
         this.init();
@@ -19,6 +21,7 @@ class WineCellar {
     init() {
         this.loadWines();
         this.loadApiKey();
+        this.loadGoogleKeys();
         this.bindEvents();
         this.renderWineList();
         this.updateStats();
@@ -82,6 +85,53 @@ class WineCellar {
         } else {
             statusEl.innerHTML = '<span class="status-disconnected">Not configured</span>';
             inputEl.value = '';
+        }
+    }
+
+    // Google Custom Search API keys
+    loadGoogleKeys() {
+        this.googleApiKey = localStorage.getItem('googleApiKey');
+        this.googleSearchEngineId = localStorage.getItem('googleSearchEngineId');
+        this.updateGoogleKeyStatus();
+    }
+
+    saveGoogleKeys(apiKey, searchEngineId) {
+        this.googleApiKey = apiKey;
+        this.googleSearchEngineId = searchEngineId;
+        if (apiKey) {
+            localStorage.setItem('googleApiKey', apiKey);
+        } else {
+            localStorage.removeItem('googleApiKey');
+        }
+        if (searchEngineId) {
+            localStorage.setItem('googleSearchEngineId', searchEngineId);
+        } else {
+            localStorage.removeItem('googleSearchEngineId');
+        }
+        this.updateGoogleKeyStatus();
+    }
+
+    updateGoogleKeyStatus() {
+        const statusEl = document.getElementById('googleKeyStatus');
+        const apiKeyInput = document.getElementById('googleApiKeyInput');
+        const cxInput = document.getElementById('googleCxInput');
+
+        if (!statusEl) return;
+
+        if (this.googleApiKey && this.googleSearchEngineId) {
+            statusEl.innerHTML = '<span class="status-connected">✓ Connected - Productfoto\'s worden automatisch gezocht</span>';
+            if (apiKeyInput) {
+                apiKeyInput.value = '••••••••••••' + this.googleApiKey.slice(-4);
+                apiKeyInput.type = 'password';
+            }
+            if (cxInput) {
+                cxInput.value = '••••••••' + this.googleSearchEngineId.slice(-4);
+                cxInput.type = 'password';
+            }
+        } else {
+            statusEl.innerHTML = '<span class="status-disconnected">Niet geconfigureerd - Je eigen foto wordt gebruikt</span>';
+            if (apiKeyInput) apiKeyInput.value = '';
+            if (cxInput) cxInput.value = '';
         }
     }
 
@@ -200,6 +250,45 @@ class WineCellar {
                 this.type = 'text';
             }
         });
+
+        // Google API keys
+        document.getElementById('saveGoogleKeys')?.addEventListener('click', () => this.handleSaveGoogleKeys());
+        document.getElementById('clearGoogleKeys')?.addEventListener('click', () => {
+            this.saveGoogleKeys(null, null);
+            document.getElementById('googleApiKeyInput').value = '';
+            document.getElementById('googleApiKeyInput').type = 'text';
+            document.getElementById('googleCxInput').value = '';
+            document.getElementById('googleCxInput').type = 'text';
+            this.showToast('Google keys verwijderd');
+        });
+
+        document.getElementById('googleApiKeyInput')?.addEventListener('focus', function() {
+            if (this.value.startsWith('••••')) {
+                this.value = '';
+                this.type = 'text';
+            }
+        });
+
+        document.getElementById('googleCxInput')?.addEventListener('focus', function() {
+            if (this.value.startsWith('••••')) {
+                this.value = '';
+                this.type = 'text';
+            }
+        });
+    }
+
+    handleSaveGoogleKeys() {
+        const apiKeyInput = document.getElementById('googleApiKeyInput');
+        const cxInput = document.getElementById('googleCxInput');
+        const apiKey = apiKeyInput.value.trim();
+        const cx = cxInput.value.trim();
+
+        if (apiKey && !apiKey.startsWith('••••') && cx && !cx.startsWith('••••')) {
+            this.saveGoogleKeys(apiKey, cx);
+            this.showToast('Google keys opgeslagen!');
+        } else if (!apiKey || !cx) {
+            this.showToast('Vul beide velden in');
+        }
     }
 
     handleSaveApiKey() {
@@ -338,13 +427,12 @@ class WineCellar {
             const wineData = await this.callChatGPTVision(imageData);
             this.populateForm(wineData);
 
-            // Nu zoeken naar een mooie productfoto
-            if (wineData.name && wineData.producer) {
+            // Zoek productfoto via Google als keys zijn geconfigureerd
+            if (this.googleApiKey && this.googleSearchEngineId && wineData.name && wineData.producer) {
                 indicatorText.textContent = 'Zoeken naar productfoto...';
                 try {
-                    const imageUrl = await this.searchWineImage(wineData);
-                    if (imageUrl) {
-                        await this.loadExternalImage(imageUrl);
+                    const productImage = await this.searchGoogleImage(wineData);
+                    if (productImage) {
                         this.showToast('Wijn herkend met productfoto!');
                     } else {
                         this.showToast('Wijn herkend! Geen productfoto gevonden.');
@@ -372,56 +460,45 @@ class WineCellar {
         }
     }
 
-    async searchWineImage(wineData) {
-        const searchQuery = `${wineData.producer} ${wineData.name} ${wineData.year || ''} wine bottle`.trim();
+    async searchGoogleImage(wineData) {
+        const searchQuery = `${wineData.producer} ${wineData.name} ${wineData.year || ''} wine bottle`;
 
-        const prompt = `Zoek een directe afbeelding URL voor deze wijn: "${searchQuery}"
+        const url = `https://www.googleapis.com/customsearch/v1?` +
+            `key=${this.googleApiKey}` +
+            `&cx=${this.googleSearchEngineId}` +
+            `&q=${encodeURIComponent(searchQuery)}` +
+            `&searchType=image` +
+            `&num=5` +
+            `&imgType=photo` +
+            `&safe=active`;
 
-Geef ALLEEN een JSON object terug met dit formaat:
-{
-    "imageUrl": "https://directe-link-naar-afbeelding.jpg"
-}
-
-BELANGRIJK:
-- Zoek naar een professionele productfoto van de wijnfles
-- De URL moet direct naar een afbeelding linken (eindigt vaak op .jpg, .png, .webp)
-- Probeer afbeeldingen van bekende wijnwebsites zoals vivino.com, wine-searcher.com, of wijnwebshops
-- Als je geen geschikte afbeelding kunt vinden, geef dan: {"imageUrl": null}
-- Geef ALLEEN de JSON terug, geen andere tekst`;
-
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.apiKey}`
-            },
-            body: JSON.stringify({
-                model: 'gpt-4o',
-                messages: [
-                    {
-                        role: 'user',
-                        content: prompt
-                    }
-                ],
-                max_tokens: 200
-            })
-        });
+        const response = await fetch(url);
 
         if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
+            throw new Error(`Google API error: ${response.status}`);
         }
 
         const data = await response.json();
-        const content = data.choices[0].message.content;
 
-        let jsonStr = content;
-        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-        if (jsonMatch) {
-            jsonStr = jsonMatch[1];
+        if (!data.items || data.items.length === 0) {
+            return null;
         }
 
-        const result = JSON.parse(jsonStr.trim());
-        return result.imageUrl;
+        // Probeer de eerste 5 afbeeldingen totdat er een werkt
+        for (const item of data.items) {
+            try {
+                const imageUrl = item.link;
+                const loaded = await this.loadExternalImage(imageUrl);
+                if (loaded) {
+                    return loaded;
+                }
+            } catch (e) {
+                console.log('Image failed to load, trying next:', e);
+                continue;
+            }
+        }
+
+        return null;
     }
 
     async loadExternalImage(imageUrl) {
@@ -429,7 +506,12 @@ BELANGRIJK:
             const img = new Image();
             img.crossOrigin = 'anonymous';
 
+            const timeout = setTimeout(() => {
+                reject(new Error('Image load timeout'));
+            }, 8000);
+
             img.onload = () => {
+                clearTimeout(timeout);
                 try {
                     // Converteer naar canvas om als base64 op te slaan
                     const canvas = document.createElement('canvas');
@@ -467,18 +549,11 @@ BELANGRIJK:
             };
 
             img.onerror = () => {
+                clearTimeout(timeout);
                 reject(new Error('Failed to load image'));
             };
 
-            // Probeer via proxy als directe toegang niet werkt
             img.src = imageUrl;
-
-            // Timeout na 5 seconden
-            setTimeout(() => {
-                if (!img.complete) {
-                    reject(new Error('Image load timeout'));
-                }
-            }, 5000);
         });
     }
 

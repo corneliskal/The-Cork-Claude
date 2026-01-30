@@ -102,6 +102,36 @@
                     </div>
 
                     <div class="settings-section">
+                        <h3>Google Image Search (optioneel)</h3>
+                        <p class="settings-description">
+                            Voor automatische productfoto's heb je een Google Custom Search API nodig.<br><br>
+                            1. Ga naar <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a> en maak een API key<br>
+                            2. Ga naar <a href="https://programmablesearchengine.google.com/" target="_blank">Programmable Search Engine</a> en maak een zoekmachine (zet "Image search" aan)<br>
+                            3. Kopieer de Search Engine ID (cx)
+                        </p>
+
+                        <div class="api-key-status" id="googleKeyStatus">
+                            <span class="status-disconnected">Niet geconfigureerd - Je eigen foto wordt gebruikt</span>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="googleApiKeyInput" style="font-size: 13px; color: #666;">Google API Key</label>
+                            <input type="text" id="googleApiKeyInput" placeholder="AIza..." class="api-key-input">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="googleCxInput" style="font-size: 13px; color: #666;">Search Engine ID (cx)</label>
+                            <input type="text" id="googleCxInput" placeholder="a1b2c3..." class="api-key-input">
+                        </div>
+
+                        <div class="api-key-input-group">
+                            <button id="saveGoogleKeys" class="save-key-btn" style="flex: 1;">Opslaan</button>
+                        </div>
+
+                        <button id="clearGoogleKeys" class="clear-key-btn">Google Keys Verwijderen</button>
+                    </div>
+
+                    <div class="settings-section">
                         <h3>About</h3>
                         <p class="settings-description">The Cork uses GPT-4 Vision to read wine labels and automatically fetch wine characteristics, tasting notes, and pricing information.</p>
                     </div>
