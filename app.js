@@ -1243,25 +1243,35 @@ BELANGRIJK:
         this.openModal('deleteModal');
     }
 
-    deleteCurrentWine() {
+    async deleteCurrentWine() {
         const wineIdToDelete = this.currentWineId;
+
+        // Set flag to prevent Firebase listener from re-adding the wine
+        this.syncInProgress = true;
+
         this.wines = this.wines.filter(w => w.id !== wineIdToDelete);
 
         // Save locally
         this.saveToLocalStorage();
 
-        // Delete from Firebase
+        // Delete from Firebase and wait for it to complete
         if (this.firebaseEnabled) {
-            this.deleteWineFromFirebase(wineIdToDelete);
+            await this.deleteWineFromFirebase(wineIdToDelete);
         }
 
         this.renderWineList();
         this.updateStats();
+        this.updateSearchVisibility();
 
         this.closeModal('deleteModal');
         this.closeModal('detailModal');
 
         this.showToast('Wine removed from cellar');
+
+        // Reset flag after a short delay to allow Firebase to sync
+        setTimeout(() => {
+            this.syncInProgress = false;
+        }, 1000);
     }
 
     // ============================
