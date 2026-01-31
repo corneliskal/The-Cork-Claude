@@ -17,7 +17,14 @@
                 <div class="logo">
                     <img src="logo.png" alt="The Cork" class="logo-icon">
                 </div>
-                <button id="settingsBtn" class="settings-btn" aria-label="Settings">
+                <button id="archiveBtn" class="header-icon-btn" aria-label="Archief">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 8v13H3V8"/>
+                        <path d="M1 3h22v5H1z"/>
+                        <path d="M10 12h4"/>
+                    </svg>
+                </button>
+                <button id="settingsBtn" class="header-icon-btn" aria-label="Settings">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <circle cx="12" cy="12" r="3"/>
                         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -439,21 +446,233 @@
             </div>
         </div>
 
-        <!-- Delete Confirmation Modal -->
-        <div id="deleteModal" class="modal">
-            <div class="modal-content delete-modal">
-                <div class="delete-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="15" y1="9" x2="9" y2="15"/>
-                        <line x1="9" y1="9" x2="15" y2="15"/>
-                    </svg>
+        <!-- Archive Wine Modal (replaces simple delete) -->
+        <div id="archiveModal" class="modal">
+            <div class="modal-content archive-modal">
+                <div class="modal-header">
+                    <h2>Wijn Archiveren</h2>
+                    <button class="close-btn" data-close="archiveModal">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
                 </div>
-                <h3>Remove Wine?</h3>
-                <p>This will permanently remove <strong id="deleteWineName"></strong> from your cellar.</p>
-                <div class="delete-actions">
-                    <button class="cancel-btn" data-close="deleteModal">Cancel</button>
-                    <button id="confirmDelete" class="confirm-delete-btn">Remove</button>
+                <div class="modal-body">
+                    <p class="archive-wine-name" id="archiveWineName">Wine Name</p>
+
+                    <div class="archive-section">
+                        <label>Hoe vond je deze wijn?</label>
+                        <div class="star-rating" id="archiveRating">
+                            <button type="button" class="star" data-rating="1">★</button>
+                            <button type="button" class="star" data-rating="2">★</button>
+                            <button type="button" class="star" data-rating="3">★</button>
+                            <button type="button" class="star" data-rating="4">★</button>
+                            <button type="button" class="star" data-rating="5">★</button>
+                        </div>
+                        <span class="rating-label" id="ratingLabel">Selecteer een beoordeling</span>
+                    </div>
+
+                    <div class="archive-section">
+                        <label>Zou je deze wijn opnieuw kopen?</label>
+                        <div class="rebuy-options" id="rebuyOptions">
+                            <button type="button" class="rebuy-btn" data-rebuy="yes">
+                                <span class="rebuy-icon">👍</span>
+                                <span>Ja!</span>
+                            </button>
+                            <button type="button" class="rebuy-btn" data-rebuy="maybe">
+                                <span class="rebuy-icon">🤔</span>
+                                <span>Misschien</span>
+                            </button>
+                            <button type="button" class="rebuy-btn" data-rebuy="no">
+                                <span class="rebuy-icon">👎</span>
+                                <span>Nee</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="archive-section">
+                        <label for="archiveNotes">Notities (optioneel)</label>
+                        <textarea id="archiveNotes" rows="2" placeholder="Je ervaring met deze wijn..."></textarea>
+                    </div>
+
+                    <div class="archive-actions">
+                        <button class="skip-archive-btn" id="skipArchive">Alleen verwijderen</button>
+                        <button class="confirm-archive-btn" id="confirmArchive">Archiveren</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Archive List Modal -->
+        <div id="archiveListModal" class="modal">
+            <div class="modal-content archive-list-modal">
+                <div class="modal-header">
+                    <h2>Archief</h2>
+                    <button class="close-btn" data-close="archiveListModal">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Archive Search -->
+                    <div class="archive-search-container">
+                        <div class="search-input-wrapper">
+                            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="M21 21l-4.35-4.35"/>
+                            </svg>
+                            <input type="text" id="archiveSearchInput" class="search-input" placeholder="Zoek in archief...">
+                            <button id="clearArchiveSearch" class="clear-search-btn hidden">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Archive Filters -->
+                    <div class="archive-filters">
+                        <select id="archiveTypeFilter" class="archive-filter-select">
+                            <option value="">Alle types</option>
+                            <option value="red">Rood</option>
+                            <option value="white">Wit</option>
+                            <option value="rosé">Rosé</option>
+                            <option value="sparkling">Sparkling</option>
+                            <option value="dessert">Dessert</option>
+                        </select>
+                        <select id="archiveRebuyFilter" class="archive-filter-select">
+                            <option value="">Alle beoordelingen</option>
+                            <option value="yes">Opnieuw kopen</option>
+                            <option value="maybe">Misschien</option>
+                            <option value="no">Niet opnieuw</option>
+                        </select>
+                    </div>
+
+                    <!-- Archive Stats -->
+                    <div class="archive-stats" id="archiveStats">
+                        <span id="archiveCount">0 wijnen</span>
+                    </div>
+
+                    <!-- Archive Empty State -->
+                    <div id="archiveEmptyState" class="archive-empty-state">
+                        <span class="archive-empty-icon">📚</span>
+                        <p>Je archief is leeg</p>
+                        <span class="archive-empty-hint">Verwijderde wijnen met een beoordeling verschijnen hier</span>
+                    </div>
+
+                    <!-- Archive List -->
+                    <div id="archiveList" class="archive-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Archive Detail Modal -->
+        <div id="archiveDetailModal" class="modal">
+            <div class="modal-content detail-modal">
+                <button class="close-btn detail-close" data-close="archiveDetailModal">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+
+                <div class="detail-header">
+                    <div id="archiveDetailImage" class="detail-image">
+                        <div class="wine-type-badge">Red</div>
+                    </div>
+                </div>
+
+                <div class="detail-body">
+                    <div class="detail-title-section">
+                        <h2 id="archiveDetailName">Wine Name</h2>
+                        <p id="archiveDetailProducer" class="detail-producer">Producer</p>
+                        <p id="archiveDetailRegion" class="detail-region">Region, Country</p>
+                    </div>
+
+                    <!-- Rating display -->
+                    <div class="archive-rating-display">
+                        <div class="rating-stars" id="archiveDetailStars">★★★★★</div>
+                        <div class="rebuy-badge" id="archiveDetailRebuy">
+                            <span class="rebuy-icon">👍</span>
+                            <span>Opnieuw kopen</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">Jaar</span>
+                            <span id="archiveDetailYear" class="meta-value">2020</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Druif</span>
+                            <span id="archiveDetailGrape" class="meta-value">Cabernet</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Prijs</span>
+                            <span id="archiveDetailPrice" class="meta-value">€25</span>
+                        </div>
+                    </div>
+
+                    <div id="archiveDetailStoreSection" class="detail-store">
+                        <span class="store-icon">🛒</span>
+                        <span id="archiveDetailStore">Winkel</span>
+                    </div>
+
+                    <div class="detail-characteristics">
+                        <h3>Profile</h3>
+                        <div class="char-bars">
+                            <div class="char-bar-item">
+                                <span class="char-label">Boldness</span>
+                                <div class="char-bar">
+                                    <div id="archiveDetailBoldness" class="char-fill" style="width: 60%"></div>
+                                </div>
+                            </div>
+                            <div class="char-bar-item">
+                                <span class="char-label">Tannins</span>
+                                <div class="char-bar">
+                                    <div id="archiveDetailTannins" class="char-fill" style="width: 60%"></div>
+                                </div>
+                            </div>
+                            <div class="char-bar-item">
+                                <span class="char-label">Acidity</span>
+                                <div class="char-bar">
+                                    <div id="archiveDetailAcidity" class="char-fill" style="width: 60%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="archiveDetailNotesSection" class="detail-notes">
+                        <h3>Tasting Notes</h3>
+                        <p id="archiveDetailNotes"></p>
+                    </div>
+
+                    <div id="archiveDetailReviewSection" class="detail-notes archive-review">
+                        <h3>Mijn Review</h3>
+                        <p id="archiveDetailReview"></p>
+                        <span class="archive-date" id="archiveDetailDate"></span>
+                    </div>
+
+                    <div class="detail-actions">
+                        <button id="restoreWineBtn" class="action-btn restore-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                <path d="M3 3v5h5"/>
+                            </svg>
+                            Terugzetten
+                        </button>
+                        <button id="deleteArchiveBtn" class="action-btn delete-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                            Verwijderen
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

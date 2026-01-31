@@ -186,7 +186,34 @@ body {
     color: var(--label-tertiary);
 }
 
-/* Settings Button - 44pt touch target */
+/* Header Icon Buttons - 44pt touch target */
+.header-icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--wine-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-icon-btn:first-of-type {
+    margin-left: auto;
+}
+
+.header-icon-btn svg {
+    width: 22px;
+    height: 22px;
+}
+
+.header-icon-btn:active {
+    opacity: 0.6;
+}
+
+/* Legacy support */
 .settings-btn {
     width: 44px;
     height: 44px;
@@ -1591,4 +1618,429 @@ body {
     .main-content {
         padding-bottom: max(100px, calc(env(safe-area-inset-bottom) + 100px));
     }
+}
+
+/* ============================
+   Archive Modal Styles
+   ============================ */
+
+.archive-modal {
+    max-height: 85vh;
+}
+
+.archive-wine-name {
+    font-size: var(--font-title3);
+    font-weight: 600;
+    color: var(--wine-primary);
+    text-align: center;
+    margin-bottom: var(--space-24);
+    padding: var(--space-12);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.archive-section {
+    margin-bottom: var(--space-24);
+}
+
+.archive-section label {
+    display: block;
+    font-size: var(--font-subhead);
+    font-weight: 500;
+    color: var(--label-primary);
+    margin-bottom: var(--space-12);
+    text-align: center;
+}
+
+/* Star Rating */
+.star-rating {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-8);
+    margin-bottom: var(--space-8);
+}
+
+.star-rating .star {
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: transparent;
+    font-size: 2rem;
+    color: var(--separator-opaque);
+    cursor: pointer;
+    transition: color 0.15s, transform 0.15s;
+}
+
+.star-rating .star:active {
+    transform: scale(1.2);
+}
+
+.star-rating .star.active {
+    color: #FFD700;
+}
+
+.star-rating .star.hover {
+    color: #FFD700;
+    opacity: 0.7;
+}
+
+.rating-label {
+    display: block;
+    text-align: center;
+    font-size: var(--font-footnote);
+    color: var(--label-tertiary);
+}
+
+/* Rebuy Options */
+.rebuy-options {
+    display: flex;
+    gap: var(--space-12);
+    justify-content: center;
+}
+
+.rebuy-btn {
+    flex: 1;
+    max-width: 100px;
+    padding: var(--space-16) var(--space-12);
+    border: 2px solid var(--separator-opaque);
+    border-radius: var(--radius-lg);
+    background: var(--bg-secondary);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-8);
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.rebuy-btn .rebuy-icon {
+    font-size: 1.5rem;
+}
+
+.rebuy-btn span:last-child {
+    font-size: var(--font-caption1);
+    font-weight: 500;
+    color: var(--label-secondary);
+}
+
+.rebuy-btn:active {
+    background: var(--bg-tertiary);
+}
+
+.rebuy-btn.active {
+    border-color: var(--wine-primary);
+    background: rgba(114, 47, 55, 0.08);
+}
+
+.rebuy-btn.active span:last-child {
+    color: var(--wine-primary);
+    font-weight: 600;
+}
+
+.archive-section textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: var(--space-12);
+    border: 1px solid var(--separator-opaque);
+    border-radius: var(--radius-md);
+    font-size: var(--font-body);
+    font-family: var(--font-system);
+    resize: vertical;
+}
+
+.archive-section textarea:focus {
+    outline: none;
+    border-color: var(--wine-primary);
+}
+
+/* Archive Actions */
+.archive-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+    margin-top: var(--space-8);
+}
+
+.skip-archive-btn {
+    height: 44px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--bg-tertiary);
+    color: var(--label-secondary);
+    font-size: var(--font-body);
+    cursor: pointer;
+}
+
+.skip-archive-btn:active {
+    background: rgba(60, 60, 67, 0.12);
+}
+
+.confirm-archive-btn {
+    height: 50px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--wine-primary);
+    color: white;
+    font-size: var(--font-body);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.confirm-archive-btn:active {
+    opacity: 0.8;
+}
+
+/* ============================
+   Archive List Modal Styles
+   ============================ */
+
+.archive-list-modal {
+    max-height: 90vh;
+}
+
+.archive-search-container {
+    margin-bottom: var(--space-12);
+}
+
+.archive-filters {
+    display: flex;
+    gap: var(--space-8);
+    margin-bottom: var(--space-12);
+}
+
+.archive-filter-select {
+    flex: 1;
+    height: 36px;
+    padding: 0 var(--space-12);
+    border: 1px solid var(--separator-opaque);
+    border-radius: var(--radius-md);
+    font-size: var(--font-subhead);
+    font-family: var(--font-system);
+    color: var(--label-primary);
+    background: var(--bg-secondary);
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%233C3C43' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+}
+
+.archive-filter-select:focus {
+    outline: none;
+    border-color: var(--wine-primary);
+}
+
+.archive-stats {
+    padding: var(--space-8) 0;
+    font-size: var(--font-footnote);
+    color: var(--label-secondary);
+    border-bottom: 0.5px solid var(--separator);
+    margin-bottom: var(--space-12);
+}
+
+/* Archive Empty State */
+.archive-empty-state {
+    text-align: center;
+    padding: var(--space-44) var(--space-24);
+}
+
+.archive-empty-state.hidden {
+    display: none;
+}
+
+.archive-empty-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: var(--space-16);
+}
+
+.archive-empty-state p {
+    font-size: var(--font-body);
+    font-weight: 600;
+    color: var(--label-primary);
+    margin-bottom: var(--space-8);
+}
+
+.archive-empty-hint {
+    font-size: var(--font-footnote);
+    color: var(--label-tertiary);
+}
+
+/* Archive List */
+.archive-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.archive-card {
+    padding: var(--space-12) 0;
+    display: flex;
+    gap: var(--space-12);
+    cursor: pointer;
+    position: relative;
+    align-items: center;
+    border-bottom: 0.5px solid var(--separator);
+}
+
+.archive-card:last-child {
+    border-bottom: none;
+}
+
+.archive-card:active {
+    background: rgba(60, 60, 67, 0.06);
+    margin: 0 calc(-1 * var(--space-16));
+    padding: var(--space-12) var(--space-16);
+}
+
+.archive-card-image {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.archive-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: var(--bg-tertiary);
+}
+
+.archive-card-image .placeholder-image {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.archive-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.archive-card-name {
+    font-size: var(--font-subhead);
+    font-weight: 600;
+    color: var(--label-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.archive-card-producer {
+    font-size: var(--font-footnote);
+    color: var(--wine-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.archive-card-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+}
+
+.archive-card-stars {
+    color: #FFD700;
+    font-size: var(--font-caption1);
+    letter-spacing: -1px;
+}
+
+.archive-card-rebuy {
+    font-size: var(--font-caption2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(114, 47, 55, 0.1);
+    color: var(--wine-primary);
+}
+
+.archive-card-rebuy.yes {
+    background: rgba(52, 199, 89, 0.15);
+    color: var(--system-green);
+}
+
+.archive-card-rebuy.maybe {
+    background: rgba(255, 149, 0, 0.15);
+    color: var(--system-orange);
+}
+
+.archive-card-rebuy.no {
+    background: rgba(255, 59, 48, 0.1);
+    color: var(--system-red);
+}
+
+/* Archive Detail Additions */
+.archive-rating-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-16);
+    padding: var(--space-16);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-20);
+}
+
+.rating-stars {
+    font-size: 1.5rem;
+    color: #FFD700;
+    letter-spacing: 2px;
+}
+
+.rating-stars .empty {
+    color: var(--separator-opaque);
+}
+
+.rebuy-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-8) var(--space-12);
+    border-radius: 100px;
+    font-size: var(--font-footnote);
+    font-weight: 600;
+}
+
+.rebuy-badge.yes {
+    background: rgba(52, 199, 89, 0.15);
+    color: var(--system-green);
+}
+
+.rebuy-badge.maybe {
+    background: rgba(255, 149, 0, 0.15);
+    color: var(--system-orange);
+}
+
+.rebuy-badge.no {
+    background: rgba(255, 59, 48, 0.15);
+    color: var(--system-red);
+}
+
+.archive-review {
+    background: rgba(114, 47, 55, 0.06);
+    border-left: 3px solid var(--wine-primary);
+}
+
+.archive-date {
+    display: block;
+    margin-top: var(--space-8);
+    font-size: var(--font-caption2);
+    color: var(--label-tertiary);
+}
+
+/* Restore Button */
+.restore-btn {
+    background: rgba(52, 199, 89, 0.1);
+    border: none;
+    color: var(--system-green);
+}
+
+.restore-btn:active {
+    background: rgba(52, 199, 89, 0.2);
 }

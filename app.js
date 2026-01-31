@@ -8,13 +8,21 @@ class WineCellar {
     constructor() {
         this.wines = [];
         this.filteredWines = [];
+        this.archive = [];
+        this.filteredArchive = [];
         this.currentWineId = null;
+        this.currentArchiveId = null;
         this.editMode = false;
         this.currentImage = null;
         this.apiKey = null;
         this.googleApiKey = null;
         this.googleSearchEngineId = null;
         this.searchQuery = '';
+        this.archiveSearchQuery = '';
+
+        // Archive modal state
+        this.archiveRating = 0;
+        this.archiveRebuy = null;
 
         // Firebase
         this.db = null;
@@ -27,6 +35,7 @@ class WineCellar {
 
     async init() {
         this.loadWines(); // Load from localStorage first (offline support)
+        this.loadArchive(); // Load archive from localStorage
         this.loadApiKey();
         this.loadGoogleKeys();
         this.bindEvents();
@@ -101,15 +110,18 @@ class WineCellar {
 
     async signOut() {
         try {
-            // Detach Firebase listener before signing out
+            // Detach Firebase listeners before signing out
             if (this.db && this.userId) {
                 this.db.ref(`users/${this.userId}/wines`).off();
+                this.db.ref(`users/${this.userId}/archive`).off();
             }
             await firebase.auth().signOut();
             this.firebaseEnabled = false;
             this.userId = null;
             this.wines = [];
+            this.archive = [];
             this.loadWines(); // Reload from localStorage
+            this.loadArchive(); // Reload archive from localStorage
             this.renderWineList();
             this.updateStats();
             this.showToast('Uitgelogd');
@@ -143,13 +155,14 @@ class WineCellar {
     setupFirebaseListener() {
         if (!this.db || !this.userId) return;
 
-        // Detach any existing listener first
+        // Detach any existing listeners first
         this.db.ref(`users/${this.userId}/wines`).off();
+        this.db.ref(`users/${this.userId}/archive`).off();
 
+        // Wines listener
         const winesRef = this.db.ref(`users/${this.userId}/wines`);
-
         winesRef.on('value', (snapshot) => {
-            console.log('📥 Firebase listener triggered. syncInProgress:', this.syncInProgress);
+            console.log('📥 Firebase wines listener triggered. syncInProgress:', this.syncInProgress);
 
             if (this.syncInProgress) {
                 console.log('  ⏸️ Ignoring update (sync in progress)');
@@ -160,9 +173,6 @@ class WineCellar {
             const firebaseWines = data ? Object.values(data) : [];
 
             console.log('  📊 Firebase data received:', firebaseWines.length, 'wines');
-            if (firebaseWines.length > 0) {
-                console.log('  Wine IDs in Firebase:', firebaseWines.map(w => w.id).join(', '));
-            }
 
             // Firebase is the source of truth - replace local wines entirely
             this.wines = firebaseWines;
@@ -178,6 +188,21 @@ class WineCellar {
             this.updateSearchVisibility();
 
             console.log('  ✅ Wines synced from cloud:', this.wines.length);
+        });
+
+        // Archive listener
+        const archiveRef = this.db.ref(`users/${this.userId}/archive`);
+        archiveRef.on('value', (snapshot) => {
+            if (this.syncInProgress) return;
+
+            const data = snapshot.val();
+            const firebaseArchive = data ? Object.values(data) : [];
+
+            console.log('📚 Archive synced from cloud:', firebaseArchive.length, 'items');
+
+            this.archive = firebaseArchive;
+            this.archive.sort((a, b) => new Date(b.archivedAt) - new Date(a.archivedAt));
+            this.saveArchiveToLocalStorage();
         });
     }
 
@@ -314,6 +339,73 @@ class WineCellar {
         // Then sync to Firebase if enabled
         if (this.firebaseEnabled) {
             this.saveWinesToFirebase();
+        }
+    }
+
+    // ============================
+    // Archive Storage
+    // ============================
+
+    loadArchive() {
+        const stored = localStorage.getItem('wineArchive');
+        if (stored) {
+            this.archive = JSON.parse(stored);
+        }
+    }
+
+    saveArchiveToLocalStorage() {
+        try {
+            localStorage.setItem('wineArchive', JSON.stringify(this.archive));
+        } catch (e) {
+            console.error('localStorage archive error:', e);
+            // Try without images
+            const archiveWithoutImages = this.archive.map(w => ({ ...w, image: null }));
+            try {
+                localStorage.setItem('wineArchive', JSON.stringify(archiveWithoutImages));
+            } catch (e2) {
+                console.error('Could not save archive to localStorage');
+            }
+        }
+    }
+
+    async saveArchiveToFirebase() {
+        if (!this.firebaseEnabled || !this.db || !this.userId) return;
+
+        try {
+            const archiveObject = {};
+            this.archive.forEach(item => {
+                archiveObject[item.id] = item;
+            });
+            await this.db.ref(`users/${this.userId}/archive`).set(archiveObject);
+            console.log('Archive saved to cloud');
+        } catch (error) {
+            console.error('Error saving archive to Firebase:', error);
+        }
+    }
+
+    async pushToArchive(archivedWine) {
+        this.archive.unshift(archivedWine);
+        this.saveArchiveToLocalStorage();
+
+        if (this.firebaseEnabled && this.db && this.userId) {
+            try {
+                await this.db.ref(`users/${this.userId}/archive/${archivedWine.id}`).set(archivedWine);
+            } catch (error) {
+                console.error('Error pushing to archive in Firebase:', error);
+            }
+        }
+    }
+
+    async deleteFromArchive(archiveId) {
+        this.archive = this.archive.filter(w => w.id !== archiveId);
+        this.saveArchiveToLocalStorage();
+
+        if (this.firebaseEnabled && this.db && this.userId) {
+            try {
+                await this.db.ref(`users/${this.userId}/archive/${archiveId}`).remove();
+            } catch (error) {
+                console.error('Error deleting from archive in Firebase:', error);
+            }
         }
     }
 
@@ -556,6 +648,48 @@ class WineCellar {
         // Google Sign-In / Sign-Out buttons
         document.getElementById('googleSignInBtn')?.addEventListener('click', () => this.signInWithGoogle());
         document.getElementById('signOutBtn')?.addEventListener('click', () => this.signOut());
+
+        // Archive button
+        document.getElementById('archiveBtn')?.addEventListener('click', () => this.openArchiveList());
+
+        // Archive modal - Star rating
+        document.querySelectorAll('#archiveRating .star').forEach(star => {
+            star.addEventListener('click', () => this.setArchiveRating(parseInt(star.dataset.rating)));
+            star.addEventListener('mouseenter', () => this.previewRating(parseInt(star.dataset.rating)));
+            star.addEventListener('mouseleave', () => this.previewRating(0));
+        });
+
+        // Archive modal - Rebuy options
+        document.querySelectorAll('#rebuyOptions .rebuy-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.setRebuyOption(btn.dataset.rebuy));
+        });
+
+        // Archive modal - Actions
+        document.getElementById('skipArchive')?.addEventListener('click', () => this.skipArchiveAndDelete());
+        document.getElementById('confirmArchive')?.addEventListener('click', () => this.confirmArchive());
+
+        // Archive list - Search
+        const archiveSearchInput = document.getElementById('archiveSearchInput');
+        const clearArchiveSearchBtn = document.getElementById('clearArchiveSearch');
+
+        archiveSearchInput?.addEventListener('input', (e) => {
+            this.archiveSearchQuery = e.target.value.trim().toLowerCase();
+            this.filterAndRenderArchive();
+        });
+
+        clearArchiveSearchBtn?.addEventListener('click', () => {
+            archiveSearchInput.value = '';
+            this.archiveSearchQuery = '';
+            this.filterAndRenderArchive();
+        });
+
+        // Archive list - Filters
+        document.getElementById('archiveTypeFilter')?.addEventListener('change', () => this.filterAndRenderArchive());
+        document.getElementById('archiveRebuyFilter')?.addEventListener('change', () => this.filterAndRenderArchive());
+
+        // Archive detail - Actions
+        document.getElementById('restoreWineBtn')?.addEventListener('click', () => this.restoreWineFromArchive());
+        document.getElementById('deleteArchiveBtn')?.addEventListener('click', () => this.deleteFromArchiveConfirm());
     }
 
     handleSaveGoogleKeys() {
@@ -1238,15 +1372,97 @@ BELANGRIJK:
     }
 
     // ============================
-    // Delete Wine
+    // Delete Wine / Archive
     // ============================
 
     openDeleteModal() {
         const wine = this.wines.find(w => w.id === this.currentWineId);
         if (!wine) return;
 
-        document.getElementById('deleteWineName').textContent = wine.name;
-        this.openModal('deleteModal');
+        // Reset archive modal state
+        this.archiveRating = 0;
+        this.archiveRebuy = null;
+
+        // Update UI
+        document.getElementById('archiveWineName').textContent = wine.producer
+            ? `${wine.name} - ${wine.producer}`
+            : wine.name;
+
+        // Reset stars
+        document.querySelectorAll('#archiveRating .star').forEach(star => {
+            star.classList.remove('active');
+        });
+        document.getElementById('ratingLabel').textContent = 'Selecteer een beoordeling';
+
+        // Reset rebuy buttons
+        document.querySelectorAll('#rebuyOptions .rebuy-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // Clear notes
+        document.getElementById('archiveNotes').value = '';
+
+        this.openModal('archiveModal');
+    }
+
+    setArchiveRating(rating) {
+        this.archiveRating = rating;
+        const labels = ['', 'Slecht', 'Matig', 'Goed', 'Heel goed', 'Uitstekend!'];
+        document.getElementById('ratingLabel').textContent = labels[rating];
+
+        document.querySelectorAll('#archiveRating .star').forEach((star, index) => {
+            star.classList.toggle('active', index < rating);
+        });
+    }
+
+    previewRating(rating) {
+        if (rating === 0) {
+            // Reset to actual rating
+            document.querySelectorAll('#archiveRating .star').forEach((star, index) => {
+                star.classList.remove('hover');
+                star.classList.toggle('active', index < this.archiveRating);
+            });
+        } else {
+            document.querySelectorAll('#archiveRating .star').forEach((star, index) => {
+                star.classList.toggle('hover', index < rating);
+            });
+        }
+    }
+
+    setRebuyOption(option) {
+        this.archiveRebuy = option;
+        document.querySelectorAll('#rebuyOptions .rebuy-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.rebuy === option);
+        });
+    }
+
+    async skipArchiveAndDelete() {
+        // Just delete without archiving
+        await this.deleteCurrentWine();
+        this.closeModal('archiveModal');
+    }
+
+    async confirmArchive() {
+        const wine = this.wines.find(w => w.id === this.currentWineId);
+        if (!wine) return;
+
+        // Create archive entry
+        const archivedWine = {
+            ...wine,
+            rating: this.archiveRating,
+            rebuy: this.archiveRebuy,
+            archiveNotes: document.getElementById('archiveNotes').value.trim() || null,
+            archivedAt: new Date().toISOString()
+        };
+
+        // Add to archive
+        await this.pushToArchive(archivedWine);
+
+        // Delete from cellar
+        await this.deleteCurrentWine();
+
+        this.closeModal('archiveModal');
+        this.showToast('Wijn gearchiveerd!');
     }
 
     async deleteCurrentWine() {
@@ -1279,16 +1495,281 @@ BELANGRIJK:
         this.updateStats();
         this.updateSearchVisibility();
 
-        this.closeModal('deleteModal');
         this.closeModal('detailModal');
-
-        this.showToast('Wine removed from cellar');
 
         // Reset flag after a short delay to allow Firebase to sync
         setTimeout(() => {
             this.syncInProgress = false;
             console.log('  Sync flag reset');
         }, 2000);
+    }
+
+    // ============================
+    // Archive List & Detail
+    // ============================
+
+    openArchiveList() {
+        // Reset search and filters
+        document.getElementById('archiveSearchInput').value = '';
+        document.getElementById('archiveTypeFilter').value = '';
+        document.getElementById('archiveRebuyFilter').value = '';
+        this.archiveSearchQuery = '';
+
+        this.filterAndRenderArchive();
+        this.openModal('archiveListModal');
+    }
+
+    filterAndRenderArchive() {
+        const typeFilter = document.getElementById('archiveTypeFilter')?.value || '';
+        const rebuyFilter = document.getElementById('archiveRebuyFilter')?.value || '';
+        const clearBtn = document.getElementById('clearArchiveSearch');
+
+        // Show/hide clear button
+        if (this.archiveSearchQuery) {
+            clearBtn?.classList.remove('hidden');
+        } else {
+            clearBtn?.classList.add('hidden');
+        }
+
+        // Filter archive
+        this.filteredArchive = this.archive.filter(wine => {
+            // Type filter
+            if (typeFilter && wine.type !== typeFilter) return false;
+
+            // Rebuy filter
+            if (rebuyFilter && wine.rebuy !== rebuyFilter) return false;
+
+            // Search query
+            if (this.archiveSearchQuery) {
+                const searchFields = [
+                    wine.name,
+                    wine.producer,
+                    wine.region,
+                    wine.grape,
+                    wine.store
+                ].filter(Boolean).join(' ').toLowerCase();
+
+                if (!searchFields.includes(this.archiveSearchQuery)) return false;
+            }
+
+            return true;
+        });
+
+        this.renderArchiveList();
+    }
+
+    renderArchiveList() {
+        const list = document.getElementById('archiveList');
+        const emptyState = document.getElementById('archiveEmptyState');
+        const statsEl = document.getElementById('archiveCount');
+
+        // Update count
+        statsEl.textContent = `${this.filteredArchive.length} wijn${this.filteredArchive.length !== 1 ? 'en' : ''}`;
+
+        if (this.archive.length === 0) {
+            list.innerHTML = '';
+            emptyState.classList.remove('hidden');
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+
+        if (this.filteredArchive.length === 0) {
+            list.innerHTML = `
+                <div class="no-results">
+                    <p>Geen wijnen gevonden</p>
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = this.filteredArchive.map(wine => {
+            const stars = '★'.repeat(wine.rating || 0) + '☆'.repeat(5 - (wine.rating || 0));
+            const rebuyLabels = { yes: 'Opnieuw', maybe: 'Misschien', no: 'Niet meer' };
+            const rebuyLabel = rebuyLabels[wine.rebuy] || '';
+
+            return `
+                <div class="archive-card" data-id="${wine.id}">
+                    <div class="archive-card-image">
+                        ${wine.image
+                            ? `<img src="${wine.image}" alt="${wine.name}">`
+                            : `<div class="placeholder-image ${wine.type}">🍷</div>`
+                        }
+                    </div>
+                    <div class="archive-card-info">
+                        <h4 class="archive-card-name">${this.escapeHtml(wine.name)}</h4>
+                        ${wine.producer ? `<p class="archive-card-producer">${this.escapeHtml(wine.producer)}</p>` : ''}
+                        <div class="archive-card-meta">
+                            ${wine.rating ? `<span class="archive-card-stars">${stars}</span>` : ''}
+                            ${wine.rebuy ? `<span class="archive-card-rebuy ${wine.rebuy}">${rebuyLabel}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Bind click events
+        list.querySelectorAll('.archive-card').forEach(card => {
+            card.addEventListener('click', () => this.openArchiveDetail(card.dataset.id));
+        });
+    }
+
+    openArchiveDetail(archiveId) {
+        const wine = this.archive.find(w => w.id === archiveId);
+        if (!wine) return;
+
+        this.currentArchiveId = archiveId;
+
+        // Image
+        const detailImage = document.getElementById('archiveDetailImage');
+        if (wine.image) {
+            detailImage.innerHTML = `<img src="${wine.image}" alt="${wine.name}"><div class="wine-type-badge">${wine.type}</div>`;
+        } else {
+            detailImage.innerHTML = `<div class="placeholder-bg ${wine.type}"><span style="font-size: 3rem;">🍷</span></div><div class="wine-type-badge">${wine.type}</div>`;
+        }
+
+        // Basic info
+        document.getElementById('archiveDetailName').textContent = wine.name;
+
+        const producerEl = document.getElementById('archiveDetailProducer');
+        if (wine.producer) {
+            producerEl.textContent = wine.producer;
+            producerEl.style.display = 'block';
+        } else {
+            producerEl.style.display = 'none';
+        }
+
+        document.getElementById('archiveDetailRegion').textContent = wine.region || 'Regio onbekend';
+
+        // Rating display
+        const starsEl = document.getElementById('archiveDetailStars');
+        if (wine.rating) {
+            const filledStars = '★'.repeat(wine.rating);
+            const emptyStars = '☆'.repeat(5 - wine.rating);
+            starsEl.innerHTML = `<span>${filledStars}</span><span class="empty">${emptyStars}</span>`;
+            starsEl.parentElement.style.display = 'flex';
+        } else {
+            starsEl.parentElement.style.display = 'none';
+        }
+
+        // Rebuy badge
+        const rebuyEl = document.getElementById('archiveDetailRebuy');
+        if (wine.rebuy) {
+            const rebuyConfig = {
+                yes: { icon: '👍', text: 'Opnieuw kopen', class: 'yes' },
+                maybe: { icon: '🤔', text: 'Misschien', class: 'maybe' },
+                no: { icon: '👎', text: 'Niet meer', class: 'no' }
+            };
+            const config = rebuyConfig[wine.rebuy];
+            rebuyEl.innerHTML = `<span class="rebuy-icon">${config.icon}</span><span>${config.text}</span>`;
+            rebuyEl.className = `rebuy-badge ${config.class}`;
+            rebuyEl.style.display = 'flex';
+        } else {
+            rebuyEl.style.display = 'none';
+        }
+
+        // Meta info
+        document.getElementById('archiveDetailYear').textContent = wine.year || '—';
+        document.getElementById('archiveDetailGrape').textContent = wine.grape || '—';
+        document.getElementById('archiveDetailPrice').textContent = wine.price ? `€${wine.price.toFixed(2)}` : '—';
+
+        // Store
+        const storeSection = document.getElementById('archiveDetailStoreSection');
+        if (wine.store) {
+            storeSection.style.display = 'flex';
+            document.getElementById('archiveDetailStore').textContent = wine.store;
+        } else {
+            storeSection.style.display = 'none';
+        }
+
+        // Characteristics
+        document.getElementById('archiveDetailBoldness').style.width = `${(wine.boldness || 3) * 20}%`;
+        document.getElementById('archiveDetailTannins').style.width = `${(wine.tannins || 3) * 20}%`;
+        document.getElementById('archiveDetailAcidity').style.width = `${(wine.acidity || 3) * 20}%`;
+
+        // Tasting notes
+        const notesSection = document.getElementById('archiveDetailNotesSection');
+        if (wine.notes) {
+            notesSection.style.display = 'block';
+            document.getElementById('archiveDetailNotes').textContent = wine.notes;
+        } else {
+            notesSection.style.display = 'none';
+        }
+
+        // Archive review
+        const reviewSection = document.getElementById('archiveDetailReviewSection');
+        if (wine.archiveNotes) {
+            reviewSection.style.display = 'block';
+            document.getElementById('archiveDetailReview').textContent = wine.archiveNotes;
+        } else {
+            reviewSection.style.display = 'none';
+        }
+
+        // Archive date
+        const dateEl = document.getElementById('archiveDetailDate');
+        if (wine.archivedAt) {
+            const date = new Date(wine.archivedAt);
+            dateEl.textContent = `Gearchiveerd op ${date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+        } else {
+            dateEl.textContent = '';
+        }
+
+        this.openModal('archiveDetailModal');
+    }
+
+    async restoreWineFromArchive() {
+        const archivedWine = this.archive.find(w => w.id === this.currentArchiveId);
+        if (!archivedWine) return;
+
+        // Create a new wine entry (without archive-specific fields)
+        const restoredWine = {
+            id: Date.now().toString(), // New ID
+            name: archivedWine.name,
+            producer: archivedWine.producer,
+            type: archivedWine.type,
+            year: archivedWine.year,
+            region: archivedWine.region,
+            grape: archivedWine.grape,
+            boldness: archivedWine.boldness,
+            tannins: archivedWine.tannins,
+            acidity: archivedWine.acidity,
+            price: archivedWine.price,
+            quantity: 1,
+            store: archivedWine.store,
+            notes: archivedWine.notes,
+            image: archivedWine.image,
+            addedAt: new Date().toISOString()
+        };
+
+        // Add to wines
+        this.wines.unshift(restoredWine);
+        this.saveToLocalStorage();
+
+        if (this.firebaseEnabled) {
+            await this.pushWineToFirebase(restoredWine);
+        }
+
+        // Remove from archive
+        await this.deleteFromArchive(this.currentArchiveId);
+
+        this.renderWineList();
+        this.updateStats();
+        this.filterAndRenderArchive();
+
+        this.closeModal('archiveDetailModal');
+        this.showToast('Wijn teruggezet naar kelder!');
+    }
+
+    async deleteFromArchiveConfirm() {
+        if (!confirm('Weet je zeker dat je deze wijn definitief wilt verwijderen uit het archief?')) {
+            return;
+        }
+
+        await this.deleteFromArchive(this.currentArchiveId);
+        this.filterAndRenderArchive();
+
+        this.closeModal('archiveDetailModal');
+        this.showToast('Wijn verwijderd uit archief');
     }
 
     // ============================
