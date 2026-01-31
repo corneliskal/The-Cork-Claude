@@ -613,8 +613,28 @@ class WineCellar {
         });
 
         // Archive modal - Actions
-        document.getElementById('skipArchive')?.addEventListener('click', () => this.skipArchiveAndDelete());
-        document.getElementById('confirmArchive')?.addEventListener('click', () => this.confirmArchive());
+        const skipArchiveBtn = document.getElementById('skipArchive');
+        const confirmArchiveBtn = document.getElementById('confirmArchive');
+
+        console.log('Archive buttons found:', { skipArchive: !!skipArchiveBtn, confirmArchive: !!confirmArchiveBtn });
+
+        if (skipArchiveBtn) {
+            skipArchiveBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Skip archive clicked');
+                this.skipArchiveAndDelete();
+            });
+        }
+
+        if (confirmArchiveBtn) {
+            confirmArchiveBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Confirm archive clicked');
+                this.confirmArchive();
+            });
+        }
 
         // Archive list - Search
         const archiveSearchInput = document.getElementById('archiveSearchInput');
@@ -1385,14 +1405,24 @@ BELANGRIJK:
     }
 
     async skipArchiveAndDelete() {
-        // Just delete without archiving
-        await this.deleteCurrentWine();
-        this.closeModal('archiveModal');
+        console.log('skipArchiveAndDelete called');
+        try {
+            // Just delete without archiving
+            await this.deleteCurrentWine();
+            this.closeModal('archiveModal');
+            this.showToast('Wijn verwijderd');
+        } catch (error) {
+            console.error('Error in skipArchiveAndDelete:', error);
+        }
     }
 
     async confirmArchive() {
+        console.log('confirmArchive called');
         const wine = this.wines.find(w => w.id === this.currentWineId);
-        if (!wine) return;
+        if (!wine) {
+            console.log('No wine found with id:', this.currentWineId);
+            return;
+        }
 
         // Create archive entry
         const archivedWine = {
