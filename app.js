@@ -1426,10 +1426,6 @@ BELANGRIJK:
         this.wines = this.wines.filter(w => w.id !== wineIdToDelete);
         console.log('  Removed from local array. Wines remaining:', this.wines.length);
 
-        // Save locally
-        this.saveToLocalStorage();
-        console.log('  Saved to localStorage');
-
         // Delete from Firebase and wait for it to complete
         if (this.firebaseEnabled) {
             console.log('  Firebase is enabled, deleting from cloud...');
@@ -1691,7 +1687,6 @@ BELANGRIJK:
 
         // Add to wines
         this.wines.unshift(restoredWine);
-        this.saveToLocalStorage();
 
         if (this.firebaseEnabled) {
             await this.pushWineToFirebase(restoredWine);
