@@ -721,7 +721,8 @@ class WineCellar {
         }
 
         const searchQuery = `${wineData.producer} ${wineData.name}`;
-        console.log('🔍 Google Image Search Query:', searchQuery);
+        const wineType = wineData.type || 'red';
+        console.log('🔍 Google Image Search Query:', searchQuery, 'Type:', wineType);
 
         try {
             const response = await fetch(CONFIG.FUNCTIONS.searchWineImage, {
@@ -730,7 +731,7 @@ class WineCellar {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${idToken}`
                 },
-                body: JSON.stringify({ query: searchQuery })
+                body: JSON.stringify({ query: searchQuery, type: wineType })
             });
 
             if (!response.ok) {
