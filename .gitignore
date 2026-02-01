@@ -13,3 +13,7 @@ Thumbs.db
 
 # Node modules (if ever added)
 node_modules/
+
+# Environment files with secrets
+.env
+functions/.env
