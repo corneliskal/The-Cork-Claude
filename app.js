@@ -14,9 +14,6 @@ class WineCellar {
         this.currentArchiveId = null;
         this.editMode = false;
         this.currentImage = null;
-        this.apiKey = null;
-        this.googleApiKey = null;
-        this.googleSearchEngineId = null;
         this.searchQuery = '';
         this.archiveSearchQuery = '';
 
@@ -30,16 +27,45 @@ class WineCellar {
         this.firebaseEnabled = false;
         this.syncInProgress = false;
 
+        // Cloud Functions status
+        this.cloudFunctionsAvailable = false;
+
         this.init();
     }
 
     async init() {
-        this.loadApiKey();
-        this.loadGoogleKeys();
         this.bindEvents();
 
         // Initialize Firebase - user must be logged in to use app
         await this.initFirebase();
+
+        // Check Cloud Functions availability
+        await this.checkCloudFunctions();
+    }
+
+    // Check if Cloud Functions are available
+    async checkCloudFunctions() {
+        if (!CONFIG.FUNCTIONS?.health) {
+            console.log('Cloud Functions not configured');
+            return;
+        }
+
+        try {
+            const response = await fetch(CONFIG.FUNCTIONS.health);
+            const data = await response.json();
+            this.cloudFunctionsAvailable = data.status === 'ok' && data.openaiConfigured;
+            console.log('Cloud Functions status:', data);
+        } catch (error) {
+            console.log('Cloud Functions not available:', error.message);
+            this.cloudFunctionsAvailable = false;
+        }
+    }
+
+    // Get Firebase ID token for API calls
+    async getIdToken() {
+        const user = firebase.auth().currentUser;
+        if (!user) return null;
+        return await user.getIdToken();
     }
 
     // ============================
@@ -359,100 +385,6 @@ class WineCellar {
         }
     }
 
-    loadApiKey() {
-        // Eerst proberen uit localStorage, anders uit config.js
-        this.apiKey = localStorage.getItem('openaiApiKey');
-        if (!this.apiKey && typeof CONFIG !== 'undefined' && CONFIG.OPENAI_API_KEY && !CONFIG.OPENAI_API_KEY.includes('YOUR')) {
-            this.apiKey = CONFIG.OPENAI_API_KEY;
-            localStorage.setItem('openaiApiKey', this.apiKey);
-        }
-        this.updateApiKeyStatus();
-    }
-
-    saveApiKey(key) {
-        this.apiKey = key;
-        if (key) {
-            localStorage.setItem('openaiApiKey', key);
-        } else {
-            localStorage.removeItem('openaiApiKey');
-        }
-        this.updateApiKeyStatus();
-    }
-
-    updateApiKeyStatus() {
-        const statusEl = document.getElementById('apiKeyStatus');
-        const inputEl = document.getElementById('apiKeyInput');
-
-        if (!statusEl || !inputEl) return;
-
-        if (this.apiKey) {
-            statusEl.innerHTML = '<span class="status-connected">✓ Connected</span>';
-            inputEl.value = '••••••••••••' + this.apiKey.slice(-4);
-            inputEl.type = 'password';
-        } else {
-            statusEl.innerHTML = '<span class="status-disconnected">Not configured</span>';
-            inputEl.value = '';
-        }
-    }
-
-    // Google Custom Search API keys
-    loadGoogleKeys() {
-        // Eerst proberen uit localStorage, anders uit config.js
-        this.googleApiKey = localStorage.getItem('googleApiKey');
-        this.googleSearchEngineId = localStorage.getItem('googleSearchEngineId');
-
-        // Als niet in localStorage, probeer config.js
-        if (!this.googleApiKey && typeof CONFIG !== 'undefined' && CONFIG.GOOGLE_API_KEY && !CONFIG.GOOGLE_API_KEY.includes('YOUR')) {
-            this.googleApiKey = CONFIG.GOOGLE_API_KEY;
-            localStorage.setItem('googleApiKey', this.googleApiKey);
-        }
-        if (!this.googleSearchEngineId && typeof CONFIG !== 'undefined' && CONFIG.GOOGLE_SEARCH_ENGINE_ID && !CONFIG.GOOGLE_SEARCH_ENGINE_ID.includes('YOUR')) {
-            this.googleSearchEngineId = CONFIG.GOOGLE_SEARCH_ENGINE_ID;
-            localStorage.setItem('googleSearchEngineId', this.googleSearchEngineId);
-        }
-
-        this.updateGoogleKeyStatus();
-    }
-
-    saveGoogleKeys(apiKey, searchEngineId) {
-        this.googleApiKey = apiKey;
-        this.googleSearchEngineId = searchEngineId;
-        if (apiKey) {
-            localStorage.setItem('googleApiKey', apiKey);
-        } else {
-            localStorage.removeItem('googleApiKey');
-        }
-        if (searchEngineId) {
-            localStorage.setItem('googleSearchEngineId', searchEngineId);
-        } else {
-            localStorage.removeItem('googleSearchEngineId');
-        }
-        this.updateGoogleKeyStatus();
-    }
-
-    updateGoogleKeyStatus() {
-        const statusEl = document.getElementById('googleKeyStatus');
-        const apiKeyInput = document.getElementById('googleApiKeyInput');
-        const cxInput = document.getElementById('googleCxInput');
-
-        if (!statusEl) return;
-
-        if (this.googleApiKey && this.googleSearchEngineId) {
-            statusEl.innerHTML = '<span class="status-connected">✓ Connected - Productfoto\'s worden automatisch gezocht</span>';
-            if (apiKeyInput) {
-                apiKeyInput.value = '••••••••••••' + this.googleApiKey.slice(-4);
-                apiKeyInput.type = 'password';
-            }
-            if (cxInput) {
-                cxInput.value = '••••••••' + this.googleSearchEngineId.slice(-4);
-                cxInput.type = 'password';
-            }
-        } else {
-            statusEl.innerHTML = '<span class="status-disconnected">Niet geconfigureerd - Je eigen foto wordt gebruikt</span>';
-            if (apiKeyInput) apiKeyInput.value = '';
-            if (cxInput) cxInput.value = '';
-        }
-    }
 
     // ============================
     // Event Binding
@@ -461,17 +393,6 @@ class WineCellar {
     bindEvents() {
         // Settings button
         document.getElementById('settingsBtn')?.addEventListener('click', () => this.openModal('settingsModal'));
-
-        // Save API key
-        document.getElementById('saveApiKey')?.addEventListener('click', () => this.handleSaveApiKey());
-
-        // Clear API key
-        document.getElementById('clearApiKey')?.addEventListener('click', () => {
-            this.saveApiKey(null);
-            document.getElementById('apiKeyInput').value = '';
-            document.getElementById('apiKeyInput').type = 'text';
-            this.showToast('API key removed');
-        });
 
         // Search functionality
         const searchInput = document.getElementById('searchInput');
@@ -559,39 +480,6 @@ class WineCellar {
         document.getElementById('editWineBtn')?.addEventListener('click', () => this.editCurrentWine());
         document.getElementById('deleteWineBtn')?.addEventListener('click', () => this.openDeleteModal());
 
-        // Allow showing/hiding API key
-        document.getElementById('apiKeyInput')?.addEventListener('focus', function() {
-            if (this.value.startsWith('••••')) {
-                this.value = '';
-                this.type = 'text';
-            }
-        });
-
-        // Google API keys
-        document.getElementById('saveGoogleKeys')?.addEventListener('click', () => this.handleSaveGoogleKeys());
-        document.getElementById('clearGoogleKeys')?.addEventListener('click', () => {
-            this.saveGoogleKeys(null, null);
-            document.getElementById('googleApiKeyInput').value = '';
-            document.getElementById('googleApiKeyInput').type = 'text';
-            document.getElementById('googleCxInput').value = '';
-            document.getElementById('googleCxInput').type = 'text';
-            this.showToast('Google keys verwijderd');
-        });
-
-        document.getElementById('googleApiKeyInput')?.addEventListener('focus', function() {
-            if (this.value.startsWith('••••')) {
-                this.value = '';
-                this.type = 'text';
-            }
-        });
-
-        document.getElementById('googleCxInput')?.addEventListener('focus', function() {
-            if (this.value.startsWith('••••')) {
-                this.value = '';
-                this.type = 'text';
-            }
-        });
-
         // Google Sign-In / Sign-Out buttons
         document.getElementById('googleSignInBtn')?.addEventListener('click', () => this.signInWithGoogle());
         document.getElementById('loginGoogleBtn')?.addEventListener('click', () => this.signInWithGoogle());
@@ -658,34 +546,6 @@ class WineCellar {
         // Archive detail - Actions
         document.getElementById('restoreWineBtn')?.addEventListener('click', () => this.restoreWineFromArchive());
         document.getElementById('deleteArchiveBtn')?.addEventListener('click', () => this.deleteFromArchiveConfirm());
-    }
-
-    handleSaveGoogleKeys() {
-        const apiKeyInput = document.getElementById('googleApiKeyInput');
-        const cxInput = document.getElementById('googleCxInput');
-        const apiKey = apiKeyInput.value.trim();
-        const cx = cxInput.value.trim();
-
-        if (apiKey && !apiKey.startsWith('••••') && cx && !cx.startsWith('••••')) {
-            this.saveGoogleKeys(apiKey, cx);
-            this.showToast('Google keys opgeslagen!');
-        } else if (!apiKey || !cx) {
-            this.showToast('Vul beide velden in');
-        }
-    }
-
-    handleSaveApiKey() {
-        const input = document.getElementById('apiKeyInput');
-        const key = input.value.trim();
-
-        if (key && !key.startsWith('••••')) {
-            if (key.startsWith('sk-')) {
-                this.saveApiKey(key);
-                this.showToast('API key saved!');
-            } else {
-                this.showToast('Invalid API key format');
-            }
-        }
     }
 
     // ============================
@@ -793,25 +653,26 @@ class WineCellar {
 
         indicator.classList.remove('hidden');
 
-        if (!this.apiKey) {
-            indicatorText.textContent = 'No API key - using demo mode...';
+        // Check if Cloud Functions are available
+        if (!this.cloudFunctionsAvailable) {
+            indicatorText.textContent = 'AI niet beschikbaar - demo modus...';
             setTimeout(() => {
                 indicator.classList.add('hidden');
                 const wineData = this.generateDemoWineData();
                 this.populateForm(wineData);
-                this.showToast('Demo mode: Add API key in ⚙️ for real recognition');
+                this.showToast('Demo modus: Cloud Functions nog niet geconfigureerd');
             }, 1500);
             return;
         }
 
-        indicatorText.textContent = 'Analyzing wine label with AI...';
+        indicatorText.textContent = 'Wijn analyseren met AI...';
 
         try {
             const wineData = await this.callChatGPTVision(imageData);
             this.populateForm(wineData);
 
-            // Zoek productfoto via Google als keys zijn geconfigureerd
-            if (this.googleApiKey && this.googleSearchEngineId && wineData.name && wineData.producer) {
+            // Zoek productfoto via Cloud Function
+            if (wineData.name && wineData.producer) {
                 indicatorText.textContent = 'Zoeken naar productfoto...';
                 try {
                     const productImage = await this.searchGoogleImage(wineData);
@@ -833,79 +694,70 @@ class WineCellar {
             console.error('Vision API error:', error);
             indicator.classList.add('hidden');
 
-            if (error.message.includes('401')) {
-                this.showToast('Invalid API key. Check settings.');
+            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+                this.showToast('Niet geautoriseerd. Log opnieuw in.');
             } else if (error.message.includes('429')) {
-                this.showToast('Rate limited. Try again in a moment.');
+                this.showToast('Te veel verzoeken. Probeer het later.');
+            } else if (error.message.includes('not configured')) {
+                this.showToast('AI service niet geconfigureerd.');
             } else {
-                this.showToast('Could not analyze image. Enter details manually.');
+                this.showToast('Kan afbeelding niet analyseren. Voer handmatig in.');
             }
         }
     }
 
     async searchGoogleImage(wineData) {
-        const searchQuery = `${wineData.producer} ${wineData.name} bottle png`;
-
-        console.log('🔍 Google Image Search Query:', searchQuery);
-
-        const url = `https://www.googleapis.com/customsearch/v1?` +
-            `key=${this.googleApiKey}` +
-            `&cx=${this.googleSearchEngineId}` +
-            `&q=${encodeURIComponent(searchQuery)}` +
-            `&searchType=image` +
-            `&num=5` +
-            `&imgType=photo` +
-            `&safe=active`;
-
-        console.log('🌐 API URL:', url.replace(this.googleApiKey, 'API_KEY_HIDDEN'));
-
-        const response = await fetch(url);
-
-        console.log('📡 Response status:', response.status);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Google API Error:', errorText);
-            throw new Error(`Google API error: ${response.status} - ${errorText}`);
-        }
-
-        const data = await response.json();
-
-        console.log('📦 Google API Response:', data);
-
-        if (data.error) {
-            console.error('❌ Google API Error in response:', data.error);
-            throw new Error(`Google API error: ${data.error.message}`);
-        }
-
-        if (!data.items || data.items.length === 0) {
-            console.log('⚠️ No images found for query');
+        // Use Cloud Function for Google Image Search (keys are stored securely on server)
+        if (!CONFIG.FUNCTIONS?.searchWineImage) {
+            console.log('Google Image Search not configured');
             return null;
         }
 
-        console.log(`✅ Found ${data.items.length} images:`);
-        data.items.forEach((item, i) => {
-            console.log(`  ${i + 1}. ${item.link}`);
-        });
-
-        // Probeer de eerste 5 afbeeldingen totdat er een werkt
-        for (let i = 0; i < data.items.length; i++) {
-            const item = data.items[i];
-            try {
-                console.log(`🖼️ Trying to load image ${i + 1}: ${item.link}`);
-                const loaded = await this.loadExternalImage(item.link);
-                if (loaded) {
-                    console.log(`✅ Successfully loaded image ${i + 1}`);
-                    return loaded;
-                }
-            } catch (e) {
-                console.log(`❌ Image ${i + 1} failed:`, e.message);
-                continue;
-            }
+        const idToken = await this.getIdToken();
+        if (!idToken) {
+            console.log('Not authenticated for image search');
+            return null;
         }
 
-        console.log('⚠️ All images failed to load (CORS issues)');
-        return null;
+        const searchQuery = `${wineData.producer} ${wineData.name}`;
+        console.log('🔍 Google Image Search Query:', searchQuery);
+
+        try {
+            const response = await fetch(CONFIG.FUNCTIONS.searchWineImage, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`
+                },
+                body: JSON.stringify({ query: searchQuery })
+            });
+
+            if (!response.ok) {
+                console.error('❌ Google Image Search API error:', response.status);
+                return null;
+            }
+
+            const result = await response.json();
+
+            if (result.imageUrl) {
+                console.log('✅ Found image:', result.imageUrl);
+                // Try to load the image
+                try {
+                    const loaded = await this.loadExternalImage(result.imageUrl);
+                    if (loaded) {
+                        return loaded;
+                    }
+                } catch (e) {
+                    console.log('❌ Failed to load image:', e.message);
+                }
+            }
+
+            console.log('⚠️ No image found or failed to load');
+            return null;
+        } catch (error) {
+            console.error('❌ Google Image Search error:', error);
+            return null;
+        }
     }
 
     async loadExternalImage(imageUrl) {
@@ -965,70 +817,39 @@ class WineCellar {
     }
 
     async callChatGPTVision(imageData) {
-        const prompt = `Je bent een sommelier en wijnexpert. Analyseer deze foto van een wijnetiket en extraheer alle informatie.
+        // Use Cloud Function for API call (keys are stored securely on server)
+        if (!CONFIG.FUNCTIONS?.analyzeWineLabel) {
+            throw new Error('Cloud Functions not configured');
+        }
 
-Return ONLY a valid JSON object with these fields (use null for unknown values):
-{
-    "name": "Wijnnaam (zonder producent, bijv. 'Grand Vin', 'Reserva', 'Cuvée Prestige')",
-    "producer": "Producent/domein/château naam",
-    "type": "red" or "white" or "rosé" or "sparkling" or "dessert",
-    "year": vintage year as number or null,
-    "region": "Wijnregio en land (bijv. 'Bordeaux, Frankrijk')",
-    "grape": "Druivenras(sen) - als niet zichtbaar, geef de typische druiven voor deze wijn/regio",
-    "boldness": 1-5 scale (1=licht, 5=vol/krachtig),
-    "tannins": 1-5 scale (1=zacht, 5=stevig tannine),
-    "acidity": 1-5 scale (1=zacht, 5=fris/hoog zuur),
-    "sweetness": 1-5 scale (1=droog, 5=zoet),
-    "price": geschatte gemiddelde winkelprijs in euros als nummer,
-    "description": "Proefnotities in het Nederlands: aroma's, smaak, body, afdronk. Wees specifiek over fruit, kruiden, hout, etc.",
-    "foodPairing": "Suggesties voor gerechten die goed passen bij deze wijn (in het Nederlands)",
-    "drinkWindow": "Optimale drinkperiode (bijv. '2024-2030' of 'Nu drinken')",
-    "alcohol": alcohol percentage als nummer (bijv. 13.5),
-    "classification": "Classificatie indien van toepassing (bijv. 'Grand Cru Classé', 'DOCG', 'Premier Cru')"
-}
+        const idToken = await this.getIdToken();
+        if (!idToken) {
+            throw new Error('Not authenticated');
+        }
 
-BELANGRIJK:
-- Scheid wijnnaam van producent. De producent is het wijnhuis/château/domaine.
-- Baseer karakteristieken op typische profielen voor dit wijntype en deze regio.
-- Geef realistische prijsschatting voor Nederlandse/Belgische winkels.
-- Beschrijf proefnotities alsof je de wijn daadwerkelijk proeft.
-- Als je iets niet kunt zien op het etiket maar wel kunt afleiden uit de wijn/regio, geef dan je beste inschatting.`;
-
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const response = await fetch(CONFIG.FUNCTIONS.analyzeWineLabel, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.apiKey}`
+                'Authorization': `Bearer ${idToken}`
             },
             body: JSON.stringify({
-                model: 'gpt-4o',
-                messages: [
-                    {
-                        role: 'user',
-                        content: [
-                            { type: 'text', text: prompt },
-                            { type: 'image_url', image_url: { url: imageData, detail: 'high' } }
-                        ]
-                    }
-                ],
-                max_tokens: 800
+                imageBase64: imageData
             })
         });
 
         if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `API error: ${response.status}`);
         }
 
-        const data = await response.json();
-        const content = data.choices[0].message.content;
+        const result = await response.json();
 
-        let jsonStr = content;
-        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-        if (jsonMatch) {
-            jsonStr = jsonMatch[1];
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to analyze image');
         }
 
-        return JSON.parse(jsonStr.trim());
+        return result.data;
     }
 
     generateDemoWineData() {

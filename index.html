@@ -104,7 +104,7 @@
         <div id="settingsModal" class="modal">
             <div class="modal-content settings-modal">
                 <div class="modal-header">
-                    <h2>Settings</h2>
+                    <h2>Instellingen</h2>
                     <button class="close-btn" data-close="settingsModal">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -113,57 +113,11 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <div class="settings-section">
-                        <h3>OpenAI API Key</h3>
-                        <p class="settings-description">Add your API key to enable AI-powered wine label recognition. Get your key from <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a></p>
-
-                        <div class="api-key-status" id="apiKeyStatus">
-                            <span class="status-disconnected">Not configured</span>
-                        </div>
-
-                        <div class="api-key-input-group">
-                            <input type="text" id="apiKeyInput" placeholder="sk-..." class="api-key-input">
-                            <button id="saveApiKey" class="save-key-btn">Save</button>
-                        </div>
-
-                        <button id="clearApiKey" class="clear-key-btn">Clear API Key</button>
-                    </div>
-
-                    <div class="settings-section">
-                        <h3>Google Image Search (optioneel)</h3>
-                        <p class="settings-description">
-                            Voor automatische productfoto's heb je een Google Custom Search API nodig.<br><br>
-                            1. Ga naar <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a> en maak een API key<br>
-                            2. Ga naar <a href="https://programmablesearchengine.google.com/" target="_blank">Programmable Search Engine</a> en maak een zoekmachine (zet "Image search" aan)<br>
-                            3. Kopieer de Search Engine ID (cx)
-                        </p>
-
-                        <div class="api-key-status" id="googleKeyStatus">
-                            <span class="status-disconnected">Niet geconfigureerd - Je eigen foto wordt gebruikt</span>
-                        </div>
-
-                        <div class="form-group" style="margin-bottom: 12px;">
-                            <label for="googleApiKeyInput" style="font-size: 13px; color: #666;">Google API Key</label>
-                            <input type="text" id="googleApiKeyInput" placeholder="AIza..." class="api-key-input">
-                        </div>
-
-                        <div class="form-group" style="margin-bottom: 12px;">
-                            <label for="googleCxInput" style="font-size: 13px; color: #666;">Search Engine ID (cx)</label>
-                            <input type="text" id="googleCxInput" placeholder="a1b2c3..." class="api-key-input">
-                        </div>
-
-                        <div class="api-key-input-group">
-                            <button id="saveGoogleKeys" class="save-key-btn" style="flex: 1;">Opslaan</button>
-                        </div>
-
-                        <button id="clearGoogleKeys" class="clear-key-btn">Google Keys Verwijderen</button>
-                    </div>
-
                     <div class="settings-section" id="authSection">
-                        <h3>Cloud Sync (Firebase)</h3>
+                        <h3>Account & Cloud Sync</h3>
                         <p class="settings-description">
-                            Synchroniseer je wijnkelder tussen al je apparaten.<br>
-                            Log in met je Google account om je wijnen overal te zien.
+                            Je wijnkelder wordt gesynchroniseerd met je Google account.<br>
+                            Al je wijnen zijn beschikbaar op al je apparaten.
                         </p>
 
                         <div class="api-key-status" id="userInfo" style="display: none; color: var(--system-green);">
@@ -189,8 +143,23 @@
                     </div>
 
                     <div class="settings-section">
-                        <h3>About</h3>
-                        <p class="settings-description">The Cork uses GPT-4 Vision to read wine labels and automatically fetch wine characteristics, tasting notes, and pricing information.</p>
+                        <h3>AI Wijnherkenning</h3>
+                        <div class="api-key-status" id="aiStatus">
+                            <span class="status-connected">✓ Automatische labelherkenning actief</span>
+                        </div>
+                        <p class="settings-description">
+                            Maak een foto van een wijnetiket en de app herkent automatisch de wijn,
+                            druivensoort, regio, en geeft proefnotities.
+                        </p>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Over The Cork</h3>
+                        <p class="settings-description">
+                            The Cork gebruikt GPT-4 Vision om wijnetiketten te lezen en automatisch
+                            wijnkenmerken, proefnotities en prijsinformatie op te halen.<br><br>
+                            Versie 2.0 - Nu met cloud sync en archief functie.
+                        </p>
                     </div>
                 </div>
             </div>
