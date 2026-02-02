@@ -93,12 +93,15 @@ class WineCellar {
 
             // Handle redirect result (for mobile sign-in)
             try {
+                console.log("Checking redirect result...");
                 const result = await firebase.auth().getRedirectResult();
+                console.log("Redirect result:", result);
                 if (result.user) {
                     console.log('Redirect sign-in successful:', result.user.displayName);
                     this.showToast(`Ingelogd als ${result.user.displayName}`);
                 }
             } catch (redirectError) {
+                console.log("Redirect error:", redirectError);
                 console.error('Redirect result error:', redirectError);
                 // Don't show error for initial page load (no redirect pending)
                 if (redirectError.code !== 'auth/null-user') {
