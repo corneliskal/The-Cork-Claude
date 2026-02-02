@@ -143,8 +143,9 @@ class WineCellar {
 
             // Check if we're on a mobile device - use redirect for better compatibility
             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const isGitHubPages = window.location.hostname.includes('github.io');
 
-            if (isMobile) {
+            if (isMobile || isGitHubPages) {
                 // Use redirect for mobile (more reliable on iOS Safari)
                 await firebase.auth().signInWithRedirect(provider);
                 // Note: page will redirect, result handled in initFirebase
