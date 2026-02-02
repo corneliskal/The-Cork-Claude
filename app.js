@@ -91,6 +91,21 @@ class WineCellar {
             this.db = firebase.database();
             this.updateSyncStatus('connecting');
 
+            // Handle redirect result (for mobile sign-in)
+            try {
+                const result = await firebase.auth().getRedirectResult();
+                if (result.user) {
+                    console.log('Redirect sign-in successful:', result.user.displayName);
+                    this.showToast(`Ingelogd als ${result.user.displayName}`);
+                }
+            } catch (redirectError) {
+                console.error('Redirect result error:', redirectError);
+                // Don't show error for initial page load (no redirect pending)
+                if (redirectError.code !== 'auth/null-user') {
+                    this.showToast('Inloggen mislukt: ' + redirectError.message);
+                }
+            }
+
             // Listen for auth state changes
             firebase.auth().onAuthStateChanged((user) => {
                 if (user) {
@@ -125,8 +140,19 @@ class WineCellar {
         try {
             this.updateSyncStatus('connecting');
             const provider = new firebase.auth.GoogleAuthProvider();
-            const result = await firebase.auth().signInWithPopup(provider);
-            this.showToast(`Ingelogd als ${result.user.displayName}`);
+
+            // Check if we're on a mobile device - use redirect for better compatibility
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+            if (isMobile) {
+                // Use redirect for mobile (more reliable on iOS Safari)
+                await firebase.auth().signInWithRedirect(provider);
+                // Note: page will redirect, result handled in initFirebase
+            } else {
+                // Use popup for desktop (faster UX)
+                const result = await firebase.auth().signInWithPopup(provider);
+                this.showToast(`Ingelogd als ${result.user.displayName}`);
+            }
         } catch (error) {
             console.error('Google sign-in error:', error);
             if (error.code !== 'auth/popup-closed-by-user') {
