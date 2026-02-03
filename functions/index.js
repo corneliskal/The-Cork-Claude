@@ -166,13 +166,19 @@ exports.searchWineImage = functions.https.onRequest(async (req, res) => {
     }
 
     try {
-        const { query } = req.body;
+        const { query, type } = req.body;
         if (!query) {
             res.status(400).json({ error: 'No search query provided' });
             return;
         }
 
-        const searchQuery = `${query} wine bottle`;
+        // Include wine type in search for better accuracy (red/white/rosé/sparkling)
+        const wineType = type || '';
+        const typeKeyword = wineType === 'rosé' ? 'rosé wine' :
+                           wineType === 'sparkling' ? 'sparkling wine champagne' :
+                           wineType === 'dessert' ? 'dessert wine' :
+                           wineType ? `${wineType} wine` : 'wine';
+        const searchQuery = `${query} ${typeKeyword} bottle`;
         const url = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${googleCx}&q=${encodeURIComponent(searchQuery)}&searchType=image&num=1&imgType=photo`;
 
         const response = await fetch(url);
