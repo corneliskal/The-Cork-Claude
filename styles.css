@@ -144,7 +144,7 @@ body {
 }
 
 .logo-icon {
-    height: 36px;
+    height: 28px;
     width: auto;
 }
 
@@ -380,8 +380,8 @@ body {
 }
 
 .empty-illustration .empty-logo {
-    height: 140px;
-    width: auto;
+    width: 280px;
+    height: auto;
     opacity: 0.8;
 }
 
@@ -2070,7 +2070,7 @@ body {
 }
 
 .login-logo {
-    width: 120px;
+    width: 240px;
     height: auto;
     margin-bottom: var(--space-24);
 }
