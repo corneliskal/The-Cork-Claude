@@ -514,11 +514,11 @@ class WineCellar {
         // Archive button
         document.getElementById('archiveBtn')?.addEventListener('click', () => this.openArchiveList());
 
-        // Archive modal - Star rating
-        document.querySelectorAll('#archiveRating .star').forEach(star => {
-            star.addEventListener('click', () => this.setArchiveRating(parseInt(star.dataset.rating)));
-            star.addEventListener('mouseenter', () => this.previewRating(parseInt(star.dataset.rating)));
-            star.addEventListener('mouseleave', () => this.previewRating(0));
+        // Archive modal - Star rating (half-star support)
+        document.querySelectorAll('#archiveRating .star-half').forEach(starHalf => {
+            starHalf.addEventListener('click', () => this.setArchiveRating(parseFloat(starHalf.dataset.rating)));
+            starHalf.addEventListener('mouseenter', () => this.previewRating(parseFloat(starHalf.dataset.rating)));
+            starHalf.addEventListener('mouseleave', () => this.previewRating(0));
         });
 
         // Archive modal - Rebuy options
@@ -1206,9 +1206,9 @@ class WineCellar {
             ? `${wine.name} - ${wine.producer}`
             : wine.name;
 
-        // Reset stars
-        document.querySelectorAll('#archiveRating .star').forEach(star => {
-            star.classList.remove('active');
+        // Reset stars (half-star support)
+        document.querySelectorAll('#archiveRating .star-half').forEach(star => {
+            star.classList.remove('active', 'hover');
         });
         document.getElementById('ratingLabel').textContent = 'Selecteer een beoordeling';
 
@@ -1225,26 +1225,48 @@ class WineCellar {
 
     setArchiveRating(rating) {
         this.archiveRating = rating;
-        const labels = ['', 'Slecht', 'Matig', 'Goed', 'Heel goed', 'Uitstekend!'];
-        document.getElementById('ratingLabel').textContent = labels[rating];
-
-        document.querySelectorAll('#archiveRating .star').forEach((star, index) => {
-            star.classList.toggle('active', index < rating);
-        });
+        // Labels for half-star ratings
+        const labels = {
+            0: 'Selecteer een beoordeling',
+            0.5: 'Zeer slecht', 1: 'Slecht',
+            1.5: 'Ondermaats', 2: 'Matig',
+            2.5: 'Redelijk', 3: 'Goed',
+            3.5: 'Erg goed', 4: 'Heel goed',
+            4.5: 'Excellent', 5: 'Uitstekend!'
+        };
+        document.getElementById('ratingLabel').textContent = labels[rating] || '';
+        this.updateStarDisplay(rating, 'active');
     }
 
     previewRating(rating) {
         if (rating === 0) {
             // Reset to actual rating
-            document.querySelectorAll('#archiveRating .star').forEach((star, index) => {
-                star.classList.remove('hover');
-                star.classList.toggle('active', index < this.archiveRating);
-            });
+            this.clearStarClass('hover');
+            this.updateStarDisplay(this.archiveRating, 'active');
         } else {
-            document.querySelectorAll('#archiveRating .star').forEach((star, index) => {
-                star.classList.toggle('hover', index < rating);
-            });
+            this.updateStarDisplay(rating, 'hover');
         }
+    }
+
+    updateStarDisplay(rating, className) {
+        document.querySelectorAll('#archiveRating .star-half').forEach(starHalf => {
+            const starRating = parseFloat(starHalf.dataset.rating);
+            starHalf.classList.toggle(className, starRating <= rating);
+        });
+    }
+
+    clearStarClass(className) {
+        document.querySelectorAll('#archiveRating .star-half').forEach(starHalf => {
+            starHalf.classList.remove(className);
+        });
+    }
+
+    // Helper to generate star display string (supports half-stars)
+    getStarDisplay(rating) {
+        const fullStars = Math.floor(rating);
+        const hasHalf = rating % 1 !== 0;
+        const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
+        return '★'.repeat(fullStars) + (hasHalf ? '⯨' : '') + '☆'.repeat(emptyStars);
     }
 
     setRebuyOption(option) {
@@ -1408,7 +1430,7 @@ class WineCellar {
         }
 
         list.innerHTML = this.filteredArchive.map(wine => {
-            const stars = '★'.repeat(wine.rating || 0) + '☆'.repeat(5 - (wine.rating || 0));
+            const stars = this.getStarDisplay(wine.rating || 0);
             const rebuyLabels = { yes: 'Opnieuw', maybe: 'Misschien', no: 'Niet meer' };
             const rebuyLabel = rebuyLabels[wine.rebuy] || '';
 
@@ -1465,12 +1487,15 @@ class WineCellar {
 
         document.getElementById('archiveDetailRegion').textContent = wine.region || 'Regio onbekend';
 
-        // Rating display
+        // Rating display (supports half-stars)
         const starsEl = document.getElementById('archiveDetailStars');
         if (wine.rating) {
-            const filledStars = '★'.repeat(wine.rating);
-            const emptyStars = '☆'.repeat(5 - wine.rating);
-            starsEl.innerHTML = `<span>${filledStars}</span><span class="empty">${emptyStars}</span>`;
+            const fullStars = Math.floor(wine.rating);
+            const hasHalf = wine.rating % 1 !== 0;
+            const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
+            const filledPart = '★'.repeat(fullStars) + (hasHalf ? '⯨' : '');
+            const emptyPart = '☆'.repeat(emptyStars);
+            starsEl.innerHTML = `<span>${filledPart}</span><span class="empty">${emptyPart}</span>`;
             starsEl.parentElement.style.display = 'flex';
         } else {
             starsEl.parentElement.style.display = 'none';
