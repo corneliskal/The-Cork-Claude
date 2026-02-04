@@ -515,10 +515,10 @@ class WineCellar {
         document.getElementById('archiveBtn')?.addEventListener('click', () => this.openArchiveList());
 
         // Archive modal - Star rating (half-star support)
-        document.querySelectorAll('#archiveRating .star-half').forEach(starHalf => {
-            starHalf.addEventListener('click', () => this.setArchiveRating(parseFloat(starHalf.dataset.rating)));
-            starHalf.addEventListener('mouseenter', () => this.previewRating(parseFloat(starHalf.dataset.rating)));
-            starHalf.addEventListener('mouseleave', () => this.previewRating(0));
+        document.querySelectorAll('#archiveRating .star').forEach(star => {
+            star.addEventListener('click', () => this.setArchiveRating(parseInt(star.dataset.rating)));
+            star.addEventListener('mouseenter', () => this.previewRating(parseInt(star.dataset.rating)));
+            star.addEventListener('mouseleave', () => this.previewRating(0));
         });
 
         // Archive modal - Rebuy options
@@ -1207,7 +1207,7 @@ class WineCellar {
             : wine.name;
 
         // Reset stars (half-star support)
-        document.querySelectorAll('#archiveRating .star-half').forEach(star => {
+        document.querySelectorAll('#archiveRating .star').forEach(star => {
             star.classList.remove('active', 'hover');
         });
         document.getElementById('ratingLabel').textContent = 'Selecteer een beoordeling';
@@ -1228,11 +1228,7 @@ class WineCellar {
         // Labels for half-star ratings
         const labels = {
             0: 'Selecteer een beoordeling',
-            0.5: 'Zeer slecht', 1: 'Slecht',
-            1.5: 'Ondermaats', 2: 'Matig',
-            2.5: 'Redelijk', 3: 'Goed',
-            3.5: 'Erg goed', 4: 'Heel goed',
-            4.5: 'Excellent', 5: 'Uitstekend!'
+            1: 'Slecht', 2: 'Matig', 3: 'Goed', 4: 'Heel goed', 5: 'Uitstekend\!'
         };
         document.getElementById('ratingLabel').textContent = labels[rating] || '';
         this.updateStarDisplay(rating, 'active');
@@ -1249,22 +1245,22 @@ class WineCellar {
     }
 
     updateStarDisplay(rating, className) {
-        document.querySelectorAll('#archiveRating .star-half').forEach(starHalf => {
-            const starRating = parseFloat(starHalf.dataset.rating);
-            starHalf.classList.toggle(className, starRating <= rating);
+        document.querySelectorAll('#archiveRating .star').forEach(star => {
+            const starRating = parseInt(star.dataset.rating);
+            star.classList.toggle(className, starRating <= rating);
         });
     }
 
     clearStarClass(className) {
-        document.querySelectorAll('#archiveRating .star-half').forEach(starHalf => {
-            starHalf.classList.remove(className);
+        document.querySelectorAll('#archiveRating .star').forEach(star => {
+            star.classList.remove(className);
         });
     }
 
     // Helper to generate star display string (supports half-stars)
     getStarDisplay(rating) {
         const fullStars = Math.floor(rating);
-        const hasHalf = rating % 1 !== 0;
+        const hasHalf = false;
         const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
         return '★'.repeat(fullStars) + (hasHalf ? '⯨' : '') + '☆'.repeat(emptyStars);
     }

@@ -2117,3 +2117,30 @@ body {
     font-weight: 600;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
+
+/* Simple Star Rating */
+.star-rating .star {
+    font-size: 2.5rem;
+    color: var(--separator-opaque);
+    cursor: pointer;
+    transition: color 0.15s, transform 0.1s;
+    user-select: none;
+}
+
+.star-rating .star:hover {
+    transform: scale(1.15);
+}
+
+.star-rating .star:active {
+    transform: scale(1.25);
+}
+
+.star-rating .star.active,
+.star-rating .star.hover {
+    color: #FFD700;
+}
+
+.star-rating .star.hover {
+    opacity: 0.7;
+}
+
