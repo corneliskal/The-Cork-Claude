@@ -1652,34 +1652,54 @@ body {
     text-align: center;
 }
 
-/* Star Rating */
+/* Star Rating - Half Star Support */
 .star-rating {
     display: flex;
     justify-content: center;
-    gap: var(--space-8);
+    gap: var(--space-4);
     margin-bottom: var(--space-8);
 }
 
-.star-rating .star {
+.star-wrapper {
+    position: relative;
     width: 44px;
     height: 44px;
-    border: none;
-    background: transparent;
     font-size: 2rem;
-    color: var(--separator-opaque);
     cursor: pointer;
-    transition: color 0.15s, transform 0.15s;
 }
 
-.star-rating .star:active {
-    transform: scale(1.2);
+.star-half {
+    position: absolute;
+    top: 0;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+    color: var(--separator-opaque);
+    transition: color 0.15s;
+    display: flex;
+    align-items: center;
 }
 
-.star-rating .star.active {
+.star-half.left {
+    left: 0;
+    justify-content: flex-start;
+}
+
+.star-half.right {
+    right: 0;
+    justify-content: flex-end;
+    direction: rtl;
+}
+
+.star-wrapper:active {
+    transform: scale(1.1);
+}
+
+.star-half.active {
     color: #FFD700;
 }
 
-.star-rating .star.hover {
+.star-half.hover {
     color: #FFD700;
     opacity: 0.7;
 }
