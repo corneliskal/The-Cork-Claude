@@ -212,7 +212,7 @@ class WineCellar {
         if (user && !user.isAnonymous) {
             // User is signed in with Google
             if (userInfo) {
-                userInfo.innerHTML = `✓ Ingelogd als <strong>${user.displayName || user.email}</strong>`;
+                userInfo.innerHTML = `âœ“ Ingelogd als <strong>${user.displayName || user.email}</strong>`;
                 userInfo.style.display = 'block';
             }
             if (signInBtn) signInBtn.style.display = 'none';
@@ -235,17 +235,17 @@ class WineCellar {
         // Wines listener
         const winesRef = this.db.ref(`users/${this.userId}/wines`);
         winesRef.on('value', (snapshot) => {
-            console.log('📥 Firebase wines listener triggered. syncInProgress:', this.syncInProgress);
+            console.log('ðŸ“¥ Firebase wines listener triggered. syncInProgress:', this.syncInProgress);
 
             if (this.syncInProgress) {
-                console.log('  ⏸️ Ignoring update (sync in progress)');
+                console.log('  â¸ï¸ Ignoring update (sync in progress)');
                 return;
             }
 
             const data = snapshot.val();
             const firebaseWines = data ? Object.values(data) : [];
 
-            console.log('  📊 Firebase data received:', firebaseWines.length, 'wines');
+            console.log('  ðŸ“Š Firebase data received:', firebaseWines.length, 'wines');
 
             // Firebase is the source of truth
             this.wines = firebaseWines;
@@ -257,7 +257,7 @@ class WineCellar {
             this.updateStats();
             this.updateSearchVisibility();
 
-            console.log('  ✅ Wines synced from cloud:', this.wines.length);
+            console.log('  âœ… Wines synced from cloud:', this.wines.length);
         });
 
         // Archive listener
@@ -268,7 +268,7 @@ class WineCellar {
             const data = snapshot.val();
             const firebaseArchive = data ? Object.values(data) : [];
 
-            console.log('📚 Archive synced from cloud:', firebaseArchive.length, 'items');
+            console.log('ðŸ“š Archive synced from cloud:', firebaseArchive.length, 'items');
 
             this.archive = firebaseArchive;
             this.archive.sort((a, b) => new Date(b.archivedAt) - new Date(a.archivedAt));
@@ -287,7 +287,7 @@ class WineCellar {
 
     async deleteWineFromFirebase(wineId) {
         if (!this.firebaseEnabled || !this.db || !this.userId) {
-            console.log('❌ Cannot delete from Firebase - not enabled or no user');
+            console.log('âŒ Cannot delete from Firebase - not enabled or no user');
             console.log('  firebaseEnabled:', this.firebaseEnabled);
             console.log('  db:', !!this.db);
             console.log('  userId:', this.userId);
@@ -296,7 +296,7 @@ class WineCellar {
 
         try {
             const path = `users/${this.userId}/wines/${wineId}`;
-            console.log('🗑️ Deleting wine from Firebase...');
+            console.log('ðŸ—‘ï¸ Deleting wine from Firebase...');
             console.log('  Wine ID:', wineId);
             console.log('  Full path:', path);
 
@@ -306,18 +306,18 @@ class WineCellar {
 
             if (snapshot.exists()) {
                 await this.db.ref(path).remove();
-                console.log('✅ Wine deleted from Firebase successfully');
+                console.log('âœ… Wine deleted from Firebase successfully');
 
                 // Verify the delete worked
                 const verifySnapshot = await this.db.ref(path).once('value');
                 console.log('  Verified deleted:', !verifySnapshot.exists());
                 return true;
             } else {
-                console.log('⚠️ Wine was not found in Firebase - may already be deleted');
+                console.log('âš ï¸ Wine was not found in Firebase - may already be deleted');
                 return true;
             }
         } catch (error) {
-            console.error('❌ Error deleting wine from Firebase:', error);
+            console.error('âŒ Error deleting wine from Firebase:', error);
             return false;
         }
     }
@@ -353,12 +353,12 @@ class WineCellar {
         const settingsStatusEl = document.getElementById('firebaseSyncStatus');
 
         const statusMap = {
-            'local': { icon: '💾', text: 'Lokale opslag', class: 'status-local', settingsText: 'Niet geconfigureerd - Data wordt alleen lokaal opgeslagen' },
-            'connecting': { icon: '🔄', text: 'Verbinden...', class: 'status-connecting', settingsText: 'Verbinden met cloud...' },
-            'synced': { icon: '☁️', text: 'Cloud sync', class: 'status-synced', settingsText: '✓ Verbonden - Je wijnen worden automatisch gesynchroniseerd' },
-            'syncing': { icon: '🔄', text: 'Syncing...', class: 'status-syncing', settingsText: 'Synchroniseren...' },
-            'error': { icon: '⚠️', text: 'Sync error', class: 'status-error', settingsText: '⚠️ Synchronisatie fout - Probeer later opnieuw' },
-            'disconnected': { icon: '📴', text: 'Offline', class: 'status-disconnected', settingsText: 'Offline - Data wordt lokaal opgeslagen' }
+            'local': { icon: 'ðŸ’¾', text: 'Lokale opslag', class: 'status-local', settingsText: 'Niet geconfigureerd - Data wordt alleen lokaal opgeslagen' },
+            'connecting': { icon: 'ðŸ”„', text: 'Verbinden...', class: 'status-connecting', settingsText: 'Verbinden met cloud...' },
+            'synced': { icon: 'â˜ï¸', text: 'Cloud sync', class: 'status-synced', settingsText: 'âœ“ Verbonden - Je wijnen worden automatisch gesynchroniseerd' },
+            'syncing': { icon: 'ðŸ”„', text: 'Syncing...', class: 'status-syncing', settingsText: 'Synchroniseren...' },
+            'error': { icon: 'âš ï¸', text: 'Sync error', class: 'status-error', settingsText: 'âš ï¸ Synchronisatie fout - Probeer later opnieuw' },
+            'disconnected': { icon: 'ðŸ“´', text: 'Offline', class: 'status-disconnected', settingsText: 'Offline - Data wordt lokaal opgeslagen' }
         };
 
         const s = statusMap[status] || statusMap['local'];
@@ -515,10 +515,10 @@ class WineCellar {
         document.getElementById('archiveBtn')?.addEventListener('click', () => this.openArchiveList());
 
         // Archive modal - Star rating (half-star support)
-        document.querySelectorAll('#archiveRating .star-half').forEach(starHalf => {
-            starHalf.addEventListener('click', () => this.setArchiveRating(parseFloat(starHalf.dataset.rating)));
-            starHalf.addEventListener('mouseenter', () => this.previewRating(parseFloat(starHalf.dataset.rating)));
-            starHalf.addEventListener('mouseleave', () => this.previewRating(0));
+        document.querySelectorAll('#archiveRating .star').forEach(star => {
+            star.addEventListener('click', () => this.setArchiveRating(parseInt(star.dataset.rating)));
+            star.addEventListener('mouseenter', () => this.previewRating(parseInt(star.dataset.rating)));
+            star.addEventListener('mouseleave', () => this.previewRating(0));
         });
 
         // Archive modal - Rebuy options
@@ -697,25 +697,20 @@ class WineCellar {
             const wineData = await this.callChatGPTVision(imageData);
             this.populateForm(wineData);
 
-            // Zoek productfoto via Cloud Function
-            if (wineData.name && wineData.producer) {
-                indicatorText.textContent = 'Zoeken naar productfoto...';
-                try {
-                    const productImage = await this.searchGoogleImage(wineData);
-                    if (productImage) {
-                        this.showToast('Wijn herkend met productfoto!');
-                    } else {
-                        this.showToast('Wijn herkend! Geen productfoto gevonden.');
-                    }
-                } catch (imgError) {
-                    console.log('Could not load product image:', imgError);
-                    this.showToast('Wijn herkend! Productfoto niet beschikbaar.');
-                }
-            } else {
-                this.showToast('Wijn herkend! Controleer de gegevens.');
-            }
-
+            // Hide indicator immediately - form is ready for user
             indicator.classList.add('hidden');
+            this.showToast('Wijn herkend! Controleer de gegevens.');
+
+            // Search for product image in background (non-blocking)
+            if (wineData.name && wineData.producer) {
+                this.searchGoogleImage(wineData).then(productImage => {
+                    if (productImage) {
+                        this.showToast('Productfoto gevonden!');
+                    }
+                }).catch(imgError => {
+                    console.log('Background image search failed:', imgError);
+                });
+            }
         } catch (error) {
             console.error('Vision API error:', error);
             indicator.classList.add('hidden');
@@ -748,7 +743,7 @@ class WineCellar {
 
         const searchQuery = `${wineData.producer} ${wineData.name}`;
         const wineType = wineData.type || 'red';
-        console.log('🔍 Google Image Search Query:', searchQuery, 'Type:', wineType);
+        console.log('ðŸ” Google Image Search Query:', searchQuery, 'Type:', wineType);
 
         try {
             const response = await fetch(CONFIG.FUNCTIONS.searchWineImage, {
@@ -761,16 +756,16 @@ class WineCellar {
             });
 
             if (!response.ok) {
-                console.error('❌ Google Image Search API error:', response.status);
+                console.error('âŒ Google Image Search API error:', response.status);
                 return null;
             }
 
             const result = await response.json();
-            console.log('📦 searchWineImage response:', JSON.stringify(result).substring(0, 200));
+            console.log('ðŸ“¦ searchWineImage response:', JSON.stringify(result).substring(0, 200));
 
             // The Cloud Function now returns base64 encoded image directly
             if (result.imageBase64) {
-                console.log('✅ Found image (base64)');
+                console.log('âœ… Found image (base64)');
                 // Update the preview with the base64 image
                 this.currentImage = result.imageBase64;
                 const preview = document.getElementById('previewImg');
@@ -781,10 +776,10 @@ class WineCellar {
                 return result.imageBase64;
             }
 
-            console.log('⚠️ No image found:', result.message);
+            console.log('âš ï¸ No image found:', result.message);
             return null;
         } catch (error) {
-            console.error('❌ Google Image Search error:', error);
+            console.error('âŒ Google Image Search error:', error);
             return null;
         }
     }
@@ -883,11 +878,11 @@ class WineCellar {
 
     generateDemoWineData() {
         const wines = [
-            { name: 'Grand Vin', producer: 'Château Margaux', type: 'red', year: 2015, region: 'Margaux, Bordeaux, France', grape: 'Cabernet Sauvignon, Merlot', boldness: 4, tannins: 4, acidity: 3, price: 450, description: 'Elegant with blackcurrant, violet, and cedar notes.' },
+            { name: 'Grand Vin', producer: 'ChÃ¢teau Margaux', type: 'red', year: 2015, region: 'Margaux, Bordeaux, France', grape: 'Cabernet Sauvignon, Merlot', boldness: 4, tannins: 4, acidity: 3, price: 450, description: 'Elegant with blackcurrant, violet, and cedar notes.' },
             { name: 'Sauvignon Blanc', producer: 'Cloudy Bay', type: 'white', year: 2022, region: 'Marlborough, New Zealand', grape: 'Sauvignon Blanc', boldness: 2, tannins: 1, acidity: 4, price: 28, description: 'Crisp with citrus and passion fruit.' },
-            { name: 'Whispering Angel', producer: 'Château d\'Esclans', type: 'rosé', year: 2023, region: 'Provence, France', grape: 'Grenache, Cinsault', boldness: 2, tannins: 1, acidity: 3, price: 22, description: 'Delicate strawberry and peach flavors.' },
+            { name: 'Whispering Angel', producer: 'ChÃ¢teau d\'Esclans', type: 'rosÃ©', year: 2023, region: 'Provence, France', grape: 'Grenache, Cinsault', boldness: 2, tannins: 1, acidity: 3, price: 22, description: 'Delicate strawberry and peach flavors.' },
             { name: 'Tignanello', producer: 'Antinori', type: 'red', year: 2019, region: 'Tuscany, Italy', grape: 'Sangiovese, Cabernet Sauvignon', boldness: 5, tannins: 4, acidity: 4, price: 120, description: 'Rich with cherry, plum, and spicy oak.' },
-            { name: 'Brut Vintage', producer: 'Dom Pérignon', type: 'sparkling', year: 2012, region: 'Champagne, France', grape: 'Chardonnay, Pinot Noir', boldness: 3, tannins: 1, acidity: 4, price: 200, description: 'Fine bubbles with brioche and citrus.' }
+            { name: 'Brut Vintage', producer: 'Dom PÃ©rignon', type: 'sparkling', year: 2012, region: 'Champagne, France', grape: 'Chardonnay, Pinot Noir', boldness: 3, tannins: 1, acidity: 4, price: 200, description: 'Fine bubbles with brioche and citrus.' }
         ];
         return wines[Math.floor(Math.random() * wines.length)];
     }
@@ -1038,13 +1033,13 @@ class WineCellar {
                 <div class="wine-card-image">
                     ${wine.image
                         ? `<img src="${wine.image}" alt="${wine.name}">`
-                        : `<div class="placeholder-image ${wine.type}">🍷</div>`
+                        : `<div class="placeholder-image ${wine.type}">ðŸ·</div>`
                     }
                 </div>
                 <div class="wine-card-info">
                     <h3 class="wine-card-name">${this.highlightMatch(wine.name)}</h3>
                     ${wine.producer ? `<p class="wine-card-producer">${this.highlightMatch(wine.producer)}</p>` : ''}
-                    <p class="wine-card-meta">${this.highlightMatch([wine.grape, wine.year].filter(Boolean).join(' · ') || wine.region || 'No details')}</p>
+                    <p class="wine-card-meta">${this.highlightMatch([wine.grape, wine.year].filter(Boolean).join(' Â· ') || wine.region || 'No details')}</p>
                     <div class="wine-card-footer">
                         <span class="wine-type-tag ${wine.type}">${wine.type}</span>
                         <span class="wine-quantity">${wine.quantity} fles${wine.quantity !== 1 ? 'sen' : ''}</span>
@@ -1089,7 +1084,7 @@ class WineCellar {
         if (wine.image) {
             detailImage.innerHTML = `<img src="${wine.image}" alt="${wine.name}"><div class="wine-type-badge">${wine.type}</div>`;
         } else {
-            detailImage.innerHTML = `<div class="placeholder-bg ${wine.type}"><span style="font-size: 3rem;">🍷</span></div><div class="wine-type-badge">${wine.type}</div>`;
+            detailImage.innerHTML = `<div class="placeholder-bg ${wine.type}"><span style="font-size: 3rem;">ðŸ·</span></div><div class="wine-type-badge">${wine.type}</div>`;
         }
 
         document.getElementById('detailName').textContent = wine.name;
@@ -1103,9 +1098,9 @@ class WineCellar {
         }
 
         document.getElementById('detailRegion').textContent = wine.region || 'Region not specified';
-        document.getElementById('detailYear').textContent = wine.year || '—';
-        document.getElementById('detailGrape').textContent = wine.grape || '—';
-        document.getElementById('detailPrice').textContent = wine.price ? `€${wine.price.toFixed(2)}` : '—';
+        document.getElementById('detailYear').textContent = wine.year || 'â€”';
+        document.getElementById('detailGrape').textContent = wine.grape || 'â€”';
+        document.getElementById('detailPrice').textContent = wine.price ? `â‚¬${wine.price.toFixed(2)}` : 'â€”';
 
         document.getElementById('detailBoldness').style.width = `${wine.boldness * 20}%`;
         document.getElementById('detailTannins').style.width = `${wine.tannins * 20}%`;
@@ -1207,7 +1202,7 @@ class WineCellar {
             : wine.name;
 
         // Reset stars (half-star support)
-        document.querySelectorAll('#archiveRating .star-half').forEach(star => {
+        document.querySelectorAll('#archiveRating .star').forEach(star => {
             star.classList.remove('active', 'hover');
         });
         document.getElementById('ratingLabel').textContent = 'Selecteer een beoordeling';
@@ -1228,11 +1223,7 @@ class WineCellar {
         // Labels for half-star ratings
         const labels = {
             0: 'Selecteer een beoordeling',
-            0.5: 'Zeer slecht', 1: 'Slecht',
-            1.5: 'Ondermaats', 2: 'Matig',
-            2.5: 'Redelijk', 3: 'Goed',
-            3.5: 'Erg goed', 4: 'Heel goed',
-            4.5: 'Excellent', 5: 'Uitstekend!'
+            1: 'Slecht', 2: 'Matig', 3: 'Goed', 4: 'Heel goed', 5: 'Uitstekend\!'
         };
         document.getElementById('ratingLabel').textContent = labels[rating] || '';
         this.updateStarDisplay(rating, 'active');
@@ -1249,24 +1240,24 @@ class WineCellar {
     }
 
     updateStarDisplay(rating, className) {
-        document.querySelectorAll('#archiveRating .star-half').forEach(starHalf => {
-            const starRating = parseFloat(starHalf.dataset.rating);
-            starHalf.classList.toggle(className, starRating <= rating);
+        document.querySelectorAll('#archiveRating .star').forEach(star => {
+            const starRating = parseInt(star.dataset.rating);
+            star.classList.toggle(className, starRating <= rating);
         });
     }
 
     clearStarClass(className) {
-        document.querySelectorAll('#archiveRating .star-half').forEach(starHalf => {
-            starHalf.classList.remove(className);
+        document.querySelectorAll('#archiveRating .star').forEach(star => {
+            star.classList.remove(className);
         });
     }
 
     // Helper to generate star display string (supports half-stars)
     getStarDisplay(rating) {
         const fullStars = Math.floor(rating);
-        const hasHalf = rating % 1 !== 0;
+        const hasHalf = false;
         const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
-        return '★'.repeat(fullStars) + (hasHalf ? '⯨' : '') + '☆'.repeat(emptyStars);
+        return 'â˜…'.repeat(fullStars) + (hasHalf ? 'â¯¨' : '') + 'â˜†'.repeat(emptyStars);
     }
 
     setRebuyOption(option) {
@@ -1319,7 +1310,7 @@ class WineCellar {
         const wineIdToDelete = this.currentWineId;
         const wineName = this.wines.find(w => w.id === wineIdToDelete)?.name || 'Unknown';
 
-        console.log('🍷 Starting delete process for:', wineName, '(ID:', wineIdToDelete, ')');
+        console.log('ðŸ· Starting delete process for:', wineName, '(ID:', wineIdToDelete, ')');
 
         // Set flag to prevent Firebase listener from re-adding the wine
         this.syncInProgress = true;
@@ -1439,7 +1430,7 @@ class WineCellar {
                     <div class="archive-card-image">
                         ${wine.image
                             ? `<img src="${wine.image}" alt="${wine.name}">`
-                            : `<div class="placeholder-image ${wine.type}">🍷</div>`
+                            : `<div class="placeholder-image ${wine.type}">ðŸ·</div>`
                         }
                     </div>
                     <div class="archive-card-info">
@@ -1471,7 +1462,7 @@ class WineCellar {
         if (wine.image) {
             detailImage.innerHTML = `<img src="${wine.image}" alt="${wine.name}"><div class="wine-type-badge">${wine.type}</div>`;
         } else {
-            detailImage.innerHTML = `<div class="placeholder-bg ${wine.type}"><span style="font-size: 3rem;">🍷</span></div><div class="wine-type-badge">${wine.type}</div>`;
+            detailImage.innerHTML = `<div class="placeholder-bg ${wine.type}"><span style="font-size: 3rem;">ðŸ·</span></div><div class="wine-type-badge">${wine.type}</div>`;
         }
 
         // Basic info
@@ -1493,8 +1484,8 @@ class WineCellar {
             const fullStars = Math.floor(wine.rating);
             const hasHalf = wine.rating % 1 !== 0;
             const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
-            const filledPart = '★'.repeat(fullStars) + (hasHalf ? '⯨' : '');
-            const emptyPart = '☆'.repeat(emptyStars);
+            const filledPart = 'â˜…'.repeat(fullStars) + (hasHalf ? 'â¯¨' : '');
+            const emptyPart = 'â˜†'.repeat(emptyStars);
             starsEl.innerHTML = `<span>${filledPart}</span><span class="empty">${emptyPart}</span>`;
             starsEl.parentElement.style.display = 'flex';
         } else {
@@ -1505,9 +1496,9 @@ class WineCellar {
         const rebuyEl = document.getElementById('archiveDetailRebuy');
         if (wine.rebuy) {
             const rebuyConfig = {
-                yes: { icon: '👍', text: 'Opnieuw kopen', class: 'yes' },
-                maybe: { icon: '🤔', text: 'Misschien', class: 'maybe' },
-                no: { icon: '👎', text: 'Niet meer', class: 'no' }
+                yes: { icon: 'ðŸ‘', text: 'Opnieuw kopen', class: 'yes' },
+                maybe: { icon: 'ðŸ¤”', text: 'Misschien', class: 'maybe' },
+                no: { icon: 'ðŸ‘Ž', text: 'Niet meer', class: 'no' }
             };
             const config = rebuyConfig[wine.rebuy];
             rebuyEl.innerHTML = `<span class="rebuy-icon">${config.icon}</span><span>${config.text}</span>`;
@@ -1518,9 +1509,9 @@ class WineCellar {
         }
 
         // Meta info
-        document.getElementById('archiveDetailYear').textContent = wine.year || '—';
-        document.getElementById('archiveDetailGrape').textContent = wine.grape || '—';
-        document.getElementById('archiveDetailPrice').textContent = wine.price ? `€${wine.price.toFixed(2)}` : '—';
+        document.getElementById('archiveDetailYear').textContent = wine.year || 'â€”';
+        document.getElementById('archiveDetailGrape').textContent = wine.grape || 'â€”';
+        document.getElementById('archiveDetailPrice').textContent = wine.price ? `â‚¬${wine.price.toFixed(2)}` : 'â€”';
 
         // Store
         const storeSection = document.getElementById('archiveDetailStoreSection');
